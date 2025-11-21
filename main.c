@@ -91,39 +91,3 @@ int main(void) {
     return 0;
 
 }
-
-void manejar_redirecciones(tline *line) {
-    // Redirección de entrada estándar desde archivo:  < fichero
-    if (line->redirect_input != NULL) {
-        int fd_in = open(line->redirect_input, O_RDONLY);
-        if (fd_in < 0) {
-            perror("open redirect_input");
-            exit(1);   // error grave, terminamos el hijo
-        }
-        // stdin (0) ahora lee de ese fichero
-        if (dup2(fd_in, STDIN_FILENO) < 0) {
-            perror("dup2 redirect_input");
-            close(fd_in);
-            exit(1);
-        }
-        close(fd_in);
-    }
-
-    // Redirección de salida estándar a archivo:  > fichero
-    if (line->redirect_output != NULL) {
-        int fd_out = open(line->redirect_output,
-                          O_WRONLY | O_CREAT | O_TRUNC,
-                          0666); // rw-rw-rw-
-        if (fd_out < 0) {
-            perror("open redirect_output");
-            exit(1);
-        }
-        // stdout (1) ahora escribe en ese fichero
-        if (dup2(fd_out, STDOUT_FILENO) < 0) {
-            perror("dup2 redirect_output");
-            close(fd_out);
-            exit(1);
-        }
-        close(fd_out);
-    }
-}
