@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "parser.h"
 #include <stdlib.h>
-//hoal
+//ver cambio
 int main(void) {
     char buf[1024];
     tline * line;
