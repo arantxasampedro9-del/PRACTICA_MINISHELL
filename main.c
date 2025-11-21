@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "parser.h"
 #include <stdlib.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 //ver cambio
 int main(void) {
     char buf[1024];
@@ -29,6 +32,29 @@ int main(void) {
             for (j=0; j<line->commands[i].argc; j++) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
+        }
+        //primer punto
+        if (line->ncommands == 1 && !line->background) {
+            
+            pid_t pid = fork();
+
+            if (pid < 0) {
+                perror("fork");
+                continue;
+            }
+
+            if (pid == 0) {
+                // Hijo ejecuta
+                execvp(line->commands[0].filename,
+                       line->commands[0].argv);
+
+                // Si exec falla
+                perror("execvp");
+                exit(1);
+            }
+
+            // Padre espera
+            waitpid(pid, NULL, 0);
         }
         printf("==> "); 
     }
