@@ -1,16 +1,20 @@
 #include <stdio.h>
 #include "parser.h"
 #include <stdlib.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-//ver cambio
+#include <signal.h>
+#include <fcntl.h>
+void manejador(int sig);
 int main(void) {
     char buf[1024];
     tline * line;
     int i,j;
     pid_t pid1;
+    int fd_in;
+    int fd_out;
 
+    
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
         line = tokenize(buf);
@@ -43,25 +47,83 @@ int main(void) {
             if (pid1 < 0) {
                 perror("fork");
                 continue;
-            }
-
-            if (pid1 == 0) {
+            }else if (pid1 == 0) {
                 // Hijo ejecuta, si hicieramos esto sin hijo la execvp sustitute el programa actual por el comando, perderiamos la minishell y se convertiria en ls, cat, etc. 
                 //accede en parser al struct de tline que hay variable commands que es de tipo struct tcommand en el que hay variable filename
                 //con el 0 se accede al primer mandato, porque ya hemos puesto el main.c antes y nos pone la => para poner los comandos 
                 //execvp(nombre del programa a ejecutar (comando), lista de argumentos argv (no se pone [0] porque queremos la lista entera))
+                if (line->redirect_input != NULL) {
+                    fd_in = open(line->redirect_input, O_RDONLY);
+                    if (fd_in < 0) {
+                        perror("open redirect_input");
+                        exit(1);
+                    }else{
+                        dup2(fd_in, STDIN_FILENO);   // ahora stdin lee de ese fichero
+                        close(fd_in);
+                    }
+                }
+
+                // Redirección de salida estándar a archivo:  > fichero
+                if (line->redirect_output != NULL) {
+                    fd_out = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                    if (fd_out < 0) {
+                        perror("open redirect_output");
+                        exit(1);
+                    }else{
+                        dup2(fd_out, STDOUT_FILENO); // ahora stdout escribe en ese fichero
+                        close(fd_out);
+                    }
+                }
+            
                 execvp(line->commands[0].filename, line->commands[0].argv); 
 
                 // Si exec falla
                 perror("execvp");
                 exit(1);
-            }
+            }else{
 
             // Padre espera, espera a un hijo concreto a terminar 
-            waitpid(pid1, NULL, 0);
+                waitpid(pid1, NULL, 0);
+            }
         }
         printf("==> "); 
     }
     return 0;
 
+}
+
+void manejar_redirecciones(tline *line) {
+    // Redirección de entrada estándar desde archivo:  < fichero
+    if (line->redirect_input != NULL) {
+        int fd_in = open(line->redirect_input, O_RDONLY);
+        if (fd_in < 0) {
+            perror("open redirect_input");
+            exit(1);   // error grave, terminamos el hijo
+        }
+        // stdin (0) ahora lee de ese fichero
+        if (dup2(fd_in, STDIN_FILENO) < 0) {
+            perror("dup2 redirect_input");
+            close(fd_in);
+            exit(1);
+        }
+        close(fd_in);
+    }
+
+    // Redirección de salida estándar a archivo:  > fichero
+    if (line->redirect_output != NULL) {
+        int fd_out = open(line->redirect_output,
+                          O_WRONLY | O_CREAT | O_TRUNC,
+                          0666); // rw-rw-rw-
+        if (fd_out < 0) {
+            perror("open redirect_output");
+            exit(1);
+        }
+        // stdout (1) ahora escribe en ese fichero
+        if (dup2(fd_out, STDOUT_FILENO) < 0) {
+            perror("dup2 redirect_output");
+            close(fd_out);
+            exit(1);
+        }
+        close(fd_out);
+    }
 }
