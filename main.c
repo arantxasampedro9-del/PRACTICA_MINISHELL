@@ -12,7 +12,7 @@ int main(void) {
     int i,j;
     pid_t pid1;
     int descriptorEntrada;
-    int fd_out;
+    int descriptorSalida;
 
     
     printf("==> "); 
@@ -67,15 +67,20 @@ int main(void) {
                     }
                 }
 
-                // Redirección de salida estándar a archivo:  > fichero
-                if (line->redirect_output != NULL) {
-                    fd_out = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-                    if (fd_out < 0) {
+                // CAMBIAR ESTO A FUNCION (REDIRECCION DE SALIDA)
+                if (line->redirect_output != NULL) { //redi_output guarda el nombre del fichero despues de >, si es distinto de NULL, es porque el usuario ha puesto > en la linea: por lo que hay que redirigir la salida estandar a ese archivo
+                    descriptorSalida = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                    //abre el fichero donde hay que escribir
+                    //primer parametor: nombre del archivo
+                    //segundo parametros es un conjunto de flags combinadas (abrir solo para escribir)(si el fichero no existe, lo crea)(si el fichero ya existe, lo deja a tamaño 0)
+                    //tercer parametro: como en las flags hay O_CREAT hay que ponerlo obligatoriamente, hay qu eponer 0666 que son los permisos por defecto si se crea el archivo (o el modo que queramos)
+                    if (descriptorSalida < 0) { //da error al abrir fichero
                         perror("open redirect_output");
                         exit(1);
                     }else{
-                        dup2(fd_out, STDOUT_FILENO); // ahora stdout escribe en ese fichero
-                        close(fd_out);
+                        dup2(descriptorSalida, stdout); // ahora stdout escribe en ese fichero, stdout es el descriptor 1 (salida estandar de siempre), dup2 hace que destino (stdout) pase a apuntar al mismo recurso que origen (descriptorSalida)
+                        //a partir de ahora, todo lo que se escriba por la salida estandar ir al fichero abierto de descriptoSalida. cualquier printf, puts, etcc del programa no va a la temriinal, va al fichero
+                        close(descriptorSalida); //ya no necesitamos descsalida tenemos el stdout que apunta al mismo sitio
                     }
                 }
             
