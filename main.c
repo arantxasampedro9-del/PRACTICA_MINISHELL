@@ -34,9 +34,10 @@ int main(void) {
             }
         }
         //primer punto
-        if (line->ncommands == 1 && !line->background) {
-            
-            pid_t pid = fork();
+        //line es la estructura que te devuelve el parser tline
+        //line->background vale 0 → NO es en background.
+        if (line->ncommands == 1 && !line->background) { //se ejecuta cuando solo hay un mandato y !0 = 1 = foreground, si el parser ve el "&" al final pone line->background a 1
+            pid_t pid = fork(); //se crea un hijo, para duplicar el proceso, el padre es la minishell y el hijo es una copia de la minishell para luego ejecutar el comando
 
             if (pid < 0) {
                 perror("fork");
@@ -44,7 +45,7 @@ int main(void) {
             }
 
             if (pid == 0) {
-                // Hijo ejecuta
+                // Hijo ejecuta, si hicieramos esto sin hijo la execvp sustitute el programa actual por el comando, perderiamos la minishell
                 execvp(line->commands[0].filename,
                        line->commands[0].argv);
 
