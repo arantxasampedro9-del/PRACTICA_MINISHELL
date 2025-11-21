@@ -62,7 +62,7 @@ int main(void) {
                         perror("open redirect_input"); //LOS ERRORES HAY QUE VER COMO PONERLOS!!
                         exit(1);
                     }else{//si se ha abierto correctamente
-                        dup2(descriptorEntrada, stdin);  //hacemos que los comandos en vez de leer algo escrito por la entrada actuen o hagan su funcion leyendo del fichero
+                        dup2(descriptorEntrada, STDIN_FILENO);  //hacemos que los comandos en vez de leer algo escrito por la entrada actuen o hagan su funcion leyendo del fichero
                         close(descriptorEntrada);//siempre se cierra
                     }
                 }
@@ -78,7 +78,7 @@ int main(void) {
                         perror("open redirect_output");
                         exit(1);
                     }else{
-                        dup2(descriptorSalida, stdout); // ahora stdout escribe en ese fichero, stdout es el descriptor 1 (salida estandar de siempre), dup2 hace que destino (stdout) pase a apuntar al mismo recurso que origen (descriptorSalida)
+                        dup2(descriptorSalida, STDOUT_FILENO); // ahora stdout escribe en ese fichero, stdout es el descriptor 1 (salida estandar de siempre), dup2 hace que destino (stdout) pase a apuntar al mismo recurso que origen (descriptorSalida)
                         //a partir de ahora, todo lo que se escriba por la salida estandar ir al fichero abierto de descriptoSalida. cualquier printf, puts, etcc del programa no va a la temriinal, va al fichero
                         close(descriptorSalida); //ya no necesitamos descsalida tenemos el stdout que apunta al mismo sitio
                     }
@@ -94,7 +94,90 @@ int main(void) {
             // Padre espera, espera a un hijo concreto a terminar 
                 waitpid(pid1, NULL, 0);
             }
+        }else if (line->ncommands == 2 && !line->background) {
+            int tub[2];
+            pid_t h1, h2;
+
+            if (pipe(tub) < 0) {
+                perror("pipe");
+                continue;
+            }
+
+            // ===== Hijo 1: primer mandato (lee de stdin, escribe en la tubería) =====
+            h1 = fork();
+            if (h1 < 0) {
+                perror("fork hijo1");
+                // si falla, cerramos la tubería y seguimos
+                close(tub[0]);
+                close(tub[1]);
+                continue;
+            } else if (h1 == 0) {
+                // En el hijo1 no se usa el extremo de lectura
+                close(tub[0]);
+
+                // Posible redirección de entrada: < fichero (afecta al primer mandato)
+                if (line->redirect_input != NULL) {
+                    descriptorEntrada = open(line->redirect_input, O_RDONLY);
+                    if (descriptorEntrada < 0) {
+                        perror("open redirect_input");
+                        exit(1);
+                    } else {
+                        dup2(descriptorEntrada, STDIN_FILENO);
+                        close(descriptorEntrada);
+                    }
+                }
+
+                // Su salida estándar va a la tubería
+                dup2(tub[1], STDOUT_FILENO);
+                close(tub[1]);
+
+                execvp(line->commands[0].filename, line->commands[0].argv);
+                perror("execvp hijo1");
+                exit(1);
+            }
+
+            // ===== Hijo 2: segundo mandato (lee de la tubería, escribe en stdout o fichero) =====
+            h2 = fork();
+            if (h2 < 0) {
+                perror("fork hijo2");
+                close(tub[0]);
+                close(tub[1]);
+                continue;
+            } else if (h2 == 0) {
+                // En el hijo2 no se usa el extremo de escritura
+                close(tub[1]);
+
+                // Su entrada estándar viene de la tubería
+                dup2(tub[0], STDIN_FILENO);
+                close(tub[0]);
+
+                // Posible redirección de salida: > fichero (afecta al segundo mandato)
+                if (line->redirect_output != NULL) {
+                    descriptorSalida = open(line->redirect_output,
+                                             O_WRONLY | O_CREAT | O_TRUNC,
+                                             0666);
+                    if (descriptorSalida < 0) {
+                        perror("open redirect_output");
+                        exit(1);
+                    } else {
+                        dup2(descriptorSalida, STDOUT_FILENO);
+                        close(descriptorSalida);
+                    }
+                }
+
+                execvp(line->commands[1].filename, line->commands[1].argv);
+                perror("execvp hijo2");
+                exit(1);
+            }
+
+            // ===== Padre: cierra tubería y espera a los dos hijos =====
+            close(tub[0]);
+            close(tub[1]);
+
+            waitpid(h1, NULL, 0);
+            waitpid(h2, NULL, 0);
         }
+
         printf("==> "); 
     }
     return 0;
