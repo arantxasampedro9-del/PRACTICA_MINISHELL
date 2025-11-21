@@ -11,7 +11,7 @@ int main(void) {
     tline * line;
     int i,j;
     pid_t pid1;
-    int fd_in;
+    int descriptorEntrada;
     int fd_out;
 
     
@@ -52,14 +52,18 @@ int main(void) {
                 //accede en parser al struct de tline que hay variable commands que es de tipo struct tcommand en el que hay variable filename
                 //con el 0 se accede al primer mandato, porque ya hemos puesto el main.c antes y nos pone la => para poner los comandos 
                 //execvp(nombre del programa a ejecutar (comando), lista de argumentos argv (no se pone [0] porque queremos la lista entera))
-                if (line->redirect_input != NULL) {
-                    fd_in = open(line->redirect_input, O_RDONLY);
-                    if (fd_in < 0) {
-                        perror("open redirect_input");
+                
+                //CAMBIAR A FUNCION!!!!!!!!!!!
+                if (line->redirect_input != NULL) { //Si el puntero de entrada no apunta a un archivo nulo significa que apunta a un archivo yq ue hay redireccion de entrada
+                    descriptorEntrada = open(line->redirect_input, O_RDONLY); 
+                    //asignamos un entero a la funcion abrir para ver si lo hace correctamnete o no, EN MODO LECTURA
+                    //si el entero es =3 es un identificador de un archivo
+                    if (descriptorEntrada<0) {//si es menor que 0 significa que no se ha podido abrir porque alomejor no existe
+                        perror("open redirect_input"); //LOS ERRORES HAY QUE VER COMO PONERLOS!!
                         exit(1);
-                    }else{
-                        dup2(fd_in, STDIN_FILENO);   // ahora stdin lee de ese fichero
-                        close(fd_in);
+                    }else{//si se ha abierto correctamente
+                        dup2(descriptorEntrada, stdin);  //hacemos que los comandos en vez de leer algo escrito por la entrada actuen o hagan su funcion leyendo del fichero
+                        close(descriptorEntrada);//siempre se cierra
                     }
                 }
 
