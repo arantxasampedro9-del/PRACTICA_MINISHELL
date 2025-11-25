@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <string.h>
+#include <limits.h>
+#include <unistd.h>
 
 int main(void) {
     char buf[1024];
@@ -44,6 +47,54 @@ int main(void) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
         }
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "exit") == 0) {
+            printf("Saliendo...\n");
+            exit(0);
+        }
+
+        // ---------- CD ----------
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "cd") == 0) {
+
+            char *dir;
+
+            // Si no hay argumentos → ir a HOME
+            if (line->commands[0].argc == 1) {
+                dir = getenv("HOME");
+                if (dir == NULL) {
+                    fprintf(stderr, "No se encuentra $HOME\n");
+                    continue;
+                }
+            } else {
+                // cd carpeta
+                dir = line->commands[0].argv[1];
+
+                if (dir[0] == '~') {
+                    char *home = getenv("HOME");
+                    static char temp[1024];
+
+                    strcpy(temp, home);
+                    strcat(temp, dir + 1);
+
+                    dir = temp;
+                }
+            }
+
+            if (chdir(dir) < 0) {
+                perror("cd");
+            } else {
+                // Mostrar la ruta absoluta actual
+                char ruta[1024];
+                if (getcwd(ruta, sizeof(ruta)) != NULL) {
+                    printf("%s\n", ruta);
+                }
+            }
+
+            printf("==> ");
+            fflush(stdout);
+            continue;
+            
+        }
+
         //primer punto
         //line es la estructura que te devuelve el parser tline
         //line->background vale 0 → NO es en background.
