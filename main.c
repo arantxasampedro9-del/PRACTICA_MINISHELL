@@ -48,7 +48,7 @@ int main(void) {
     int miUmask = 0022; // mascara inicial por defecto
     int nuevaMascara;
 
-    proceso_bg lista_bg[100];
+    proceso_bg lista_bg[100]; //hay limite maximo de procesos?
     int num_bg = 0;
     
     signal(SIGINT, SIG_IGN);
@@ -196,11 +196,13 @@ int main(void) {
         }
 
 
-        //jobs
+        //jobs, comprobamos que es un mandato y es jobs
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
-
-            for (i = 0; i < num_bg; i++) {
+            
+            for (i = 0; i < num_bg; i++) { //recorre el numero de procesos que estan guardados en la estructura para justamente recorrerlos
                 printf("[%d]  Running  %s &\n", i+1, lista_bg[i].comando);
+                // recorro todos los procesos que estaran guardados en un array dentro de la estrutura
+                //es decir tenemos un array para procesos, y a su vez un array para los comando
             }
 
                 printf("==> ");
@@ -208,24 +210,27 @@ int main(void) {
                 continue;
         }
 
-        //fg
+        //fg, nos asrguramos que es un mandato y es fg
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "fg") == 0) {
 
-            int id;
+            int id; //creamos el id para el proceso que identificara en el background de forma univoca
 
             // Caso "fg" sin argumentos → último trabajo
-            if (line->commands[0].argc == 1) {
-                if (num_bg == 0) {
+            if (line->commands[0].argc == 1) { //si el usuario escribe fg sin el id del proceso
+                if (num_bg == 0) { //entonces si no hay procesos volvemos
                     fprintf(stderr, "fg: no hay trabajos\n");
                     printf("==> ");
                     fflush(stdout);
                     continue;
                 }
-                id = num_bg - 1;
-            } else {
+                id = num_bg - 1; //si si que hay traemos a foreground el ultimo proceso mandado a background
+                //Restamos 1 porque tu lista usa índices desde 0 (el usuario ve [1], [2], ...) 
+            } else { //el otro caso es que ponga fg con el id del proceso
             // Caso "fg 2" por ejemplo
                 id = atoi(line->commands[0].argv[1]) - 1;
-                if (id < 0 || id >= num_bg) {
+                //el numero de proceso es el segundo argumento que pasa el usuario es decir  argv[1] si meto fg 2 seria el 2
+                //como 2 es el argv[1] e suna cadena lo pasamos a entero para que sea el id correcto
+                if (id < 0 || id >= num_bg) {// en estos casos no seria valido
                     fprintf(stderr, "fg: identificador inválido\n");
                     printf("==> ");
                     fflush(stdout);
@@ -233,25 +238,21 @@ int main(void) {
                 }
             }
 
-            printf("%s\n", lista_bg[id].comando);
+            printf("%s\n", lista_bg[id].comando); //imprimimos el comando que queremos traer a fg que es el numero que tenga el id
 
             // Esperar a que termine el proceso
-            waitpid(lista_bg[id].pid, NULL, 0);
+            waitpid(lista_bg[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el proceos creado con ese id
 
-            // Borrar de la lista desplazando los demás
-            for (int k = id; k < num_bg - 1; k++) {
-                lista_bg[k] = lista_bg[k+1];
+            //cuando el proceso termina debemos eliminarlo de la lista
+            for (i = id; i < num_bg - 1; i++) {//recorremos todos los que se mantienen
+                lista_bg[i] = lista_bg[i+1]; //si borramos uno todos deben moverse hacia atras
             }
-            num_bg--;
+            num_bg--;//ahora hay uno menos, reducimos contador
 
             printf("==> ");
             fflush(stdout);
             continue;
         }
-
-
-
-
 
 
         //PRIMER PUNTO
