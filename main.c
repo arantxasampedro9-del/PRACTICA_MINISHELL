@@ -151,9 +151,7 @@ int main(void) {
 
                 // Posible redirección de salida: > fichero (afecta al segundo mandato)
                 if (line->redirect_output != NULL) {
-                    descriptorSalida = open(line->redirect_output,
-                                             O_WRONLY | O_CREAT | O_TRUNC,
-                                             0666);
+                    descriptorSalida = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
                     if (descriptorSalida < 0) {
                         perror("open redirect_output");
                         exit(1);
