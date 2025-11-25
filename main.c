@@ -258,7 +258,7 @@ int main(void) {
         //PRIMER PUNTO
         //line es la estructura que te devuelve el parser tline
         //line->background vale 0 → NO es en background.
-        if (line->ncommands == 1 && !line->background) { //se ejecuta cuando solo hay un mandato y !0 = 1 = foreground, si el parser ve el "&" al final pone line->background a 1
+        /*if (line->ncommands == 1 && !line->background) { //se ejecuta cuando solo hay un mandato y !0 = 1 = foreground, si el parser ve el "&" al final pone line->background a 1
             pid1 = fork(); //se crea un hijo, para duplicar el proceso, el padre es la minishell y el hijo es una copia de la minishell para luego ejecutar el comando
 
             if (pid1 < 0) {
@@ -313,6 +313,7 @@ int main(void) {
             // Padre espera, espera a un hijo concreto a terminar 
                 waitpid(pid1, NULL, 0);
             }
+                */
         //SEGUNDO PUNTO
         /*}else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
             if (pipe(tub) < 0) { //si la creacion de la tuberia es menor que 0 es que hay error
@@ -392,7 +393,7 @@ int main(void) {
             waitpid(h1, NULL, 0);
             waitpid(h2, NULL, 0);
         //TERCER PUNTO*/
-        }else if (line->ncommands >= 2) {
+        if (line->ncommands >= 1) {
 
             numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
             // (type*)malloc(n_bytes), pero en C moderno no hace falta el tipo 
