@@ -446,6 +446,8 @@ int main(void) {
 
                     if (!line->background){
                         signal(SIGINT, SIG_DFL);
+                    }else{
+                        signal(SIGINT, SIG_IGN);
                     } 
                     // ----- 1. Redirecciones especiales -----
                     // Entrada estándar (SOLO PRIMER MANDATO)
