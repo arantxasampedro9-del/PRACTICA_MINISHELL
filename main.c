@@ -184,13 +184,10 @@ int main(void) {
                 exit(1);
             }
         
-<<<<<<< HEAD
             for (i = 0; i < numComandos - 1; i++) {
                 tuberias[i] = malloc(2 * sizeof(int));
             }   
                     
-=======
->>>>>>> e790a1f (a)
             hijos = malloc(numComandos * sizeof(pid_t));   
             if (hijos == NULL) {
                 perror("malloc hijos");
