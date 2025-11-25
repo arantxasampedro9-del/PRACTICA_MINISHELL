@@ -79,26 +79,28 @@ int main(void) {
                 }
             } else {
                 // si hay argumento es decir cd y algo mas : cd . el directorio tendra que tomar el valor de ese argumento
-                directorio = line->commands[0].argv[1];
+                directorio = line->commands[0].argv[1]; // con esto coges el argumento que va despues de cd (commands[0]) con argv[1]
+                //ahora la variable directorio guarda la cadena que esta despues de cd
                 
+                //comprueba si el primer caracter del argumento es ~ para asi convertirlo  de ~/Documentos a /home/usuario/Documentos
                 if (directorio[0] == '~') { //si es cd ~/Documentos es otra froma de acceder a home: /home/fati/Documentos
-                    home = getenv("HOME");
+                    home = getenv("HOME"); //obtiene la ruta de home
         
-                    //creamos una cadena con la parte de home mas lo que venga despues
-                    strcpy(dirTemporal, home);
-                    strcat(dirTemporal, directorio + 1);
+                    //cconstruye ruta completa
+                    strcpy(dirTemporal, home); //copia en dirTemporal el home
+                    strcat(dirTemporal, directorio + 1); //añade lo que habia despues de ~
+                    //directorio + 1 hace que saltes el primer caracter ~
 
-                    directorio = dirTemporal;
+                    directorio = dirTemporal; //se guarda en directorio eso que hemos creado
                 }
             }
 
-            if (chdir(directorio) < 0) {//si la carpeta existe en nuestro ordenador sustituye la ruta por el directorio real
-                perror("cd");//error
-            } else {// ya estamos situadiso en el directorio actual y valido lo gaurdamos en ruta e imprimimos
-                // si si que existe entonces guarda un puntero a ruta en ruta para despues imprimirlo
-                if (getcwd(ruta, sizeof(ruta)) != NULL) { //
+            if (chdir(directorio) == 0) {//si la carpeta existe en nuestro ordenador entra en el bucle y ya estamos dentro del directorio
+                if (getcwd(ruta, sizeof(ruta)) != NULL) { //obtener directorio actual, get current working directory, en ruta es donde va a escribir rl directorio donde estamos
                     printf("%s\n", ruta);
                 }
+            } else {
+                perror("cd");//error
             }
 
             printf("==> ");
