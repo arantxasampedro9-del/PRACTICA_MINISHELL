@@ -10,6 +10,13 @@
 #include <unistd.h>
 #include <sys/stat.h> // para umask
 
+typedef struct {
+    pid_t pid;
+    char comando[1024];
+    int id;
+} proceso_bg;
+
+
 int main(void) {
     char buf[1024];
     tline * line;
@@ -31,6 +38,9 @@ int main(void) {
     char *argumento;
     int miUmask = 0022; // mascara inicial por defecto
     int nuevaMascara;
+
+    proceso_bg lista_bg[100];
+    int num_bg = 0;
     
 
     printf("==> "); 
@@ -174,6 +184,65 @@ int main(void) {
             fflush(stdout);
             continue;
         }
+
+
+        //jobs
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
+
+            for (int k = 0; k < num_bg; k++) {
+                printf("[%d]  Running  %s &\n", k+1, lista_bg[k].comando);
+            }
+
+                printf("==> ");
+                fflush(stdout);
+                continue;
+        }
+
+        //fg
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "fg") == 0) {
+
+            int id;
+
+            // Caso "fg" sin argumentos → último trabajo
+            if (line->commands[0].argc == 1) {
+                if (num_bg == 0) {
+                    fprintf(stderr, "fg: no hay trabajos\n");
+                    printf("==> ");
+                    fflush(stdout);
+                    continue;
+                }
+                id = num_bg - 1;
+            } else {
+            // Caso "fg 2" por ejemplo
+                id = atoi(line->commands[0].argv[1]) - 1;
+                if (id < 0 || id >= num_bg) {
+                    fprintf(stderr, "fg: identificador inválido\n");
+                    printf("==> ");
+                    fflush(stdout);
+                    continue;
+                }
+            }
+
+            printf("%s\n", lista_bg[id].comando);
+
+            // Esperar a que termine el proceso
+            waitpid(lista_bg[id].pid, NULL, 0);
+
+            // Borrar de la lista desplazando los demás
+            for (int k = id; k < num_bg - 1; k++) {
+                lista_bg[k] = lista_bg[k+1];
+            }
+            num_bg--;
+
+            printf("==> ");
+            fflush(stdout);
+            continue;
+        }
+
+
+
+
+
 
         //PRIMER PUNTO
         //line es la estructura que te devuelve el parser tline
