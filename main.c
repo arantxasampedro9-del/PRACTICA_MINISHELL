@@ -8,6 +8,7 @@
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
+#include <sys/stat.h>// para umask
 
 int main(void) {
     char buf[1024];
