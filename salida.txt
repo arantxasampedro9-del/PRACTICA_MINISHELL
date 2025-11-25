@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 hola gato perro
 hola hola hola
 perro hola raton
+=======
+hola gato perro
+hola hola hola
+perro hola ratón
+>>>>>>> 81668f0 (c)

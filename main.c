@@ -265,6 +265,7 @@ int main(void) {
                 perror("fork");
                 continue;
             }else if (pid1 == 0) {
+                
                 // Hijo ejecuta, si hicieramos esto sin hijo la execvp sustitute el programa actual por el comando, perderiamos la minishell y se convertiria en ls, cat, etc. 
                 //accede en parser al struct de tline que hay variable commands que es de tipo struct tcommand en el que hay variable filename
                 //con el 0 se accede al primer mandato, porque ya hemos puesto el main.c antes y nos pone la => para poner los comandos 
@@ -391,7 +392,11 @@ int main(void) {
             waitpid(h1, NULL, 0);
             waitpid(h2, NULL, 0);
         //TERCER PUNTO*/
+<<<<<<< HEAD
         }else if (line->ncommands > 2) {
+=======
+        }else if (line->ncommands >= 2) {
+>>>>>>> 81668f0 (c)
 
             numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
             // (type*)malloc(n_bytes), pero en C moderno no hace falta el tipo 
