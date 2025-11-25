@@ -228,43 +228,59 @@ int main(void) {
             waitpid(h2, NULL, 0);
         }else if (line->ncommands > 2 && !line->background) {
 
-            numComandos=line->ncommands; 
-            tuberias = malloc((numComandos - 1) * sizeof(int[2]));
+            numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
+            // (type*)malloc(n_bytes), pero en C moderno no hace falta el tipo 
+            //malloc: reserva un vector de punteros, uno por tubería. tuberias[0] --> ? , tuberias[1] --> ? ...
+            //Cada posición del vector todavía NO tiene memoria para los dos extremos.
+            tuberias = malloc((numComandos - 1) * sizeof(int*)); //reserva de memoria para las tuberias (nº de tuberias que hay), si hay n comandos se necesitan n-1 tuberias
             if (tuberias == NULL) {
                 perror("malloc tuberias");
                 exit(1);
             }
         
+            // aqui se reserva espacio para dos enteros que son los extremos de la tuberia
+            // se crea cada tuberia como un array de dos enteros
+            // tuberias[i][0] --> extremos de lectura
+            // tuberias[i][1] --> extremos de escritura
             for (i = 0; i < numComandos - 1; i++) {
-                tuberias[i] = malloc(2 * sizeof(int));
+                tuberias[i] = malloc(2 * sizeof(int)); 
+                    if (tuberias[i] == NULL) {
+                        perror("malloc tuberia individual");
+                        exit(1);
+                    }
             }   
-                    
+              
+            //// se reserva memoria para los hijos, se guarda el PID de cada proceso hijo para luego hacer waitpid  
             hijos = malloc(numComandos * sizeof(pid_t));   
             if (hijos == NULL) {
                 perror("malloc hijos");
                 exit(1);
             }
-            // ===== Crear las tuberías necesarias =====
+
+            // ===== Crear las tuberías necesarias, las reales =====
             for (i = 0; i < numComandos - 1; i++) {
-                if (pipe(tuberias[i]) < 0) {
+                if (pipe(tuberias[i]) < 0) {  // aqui es donde el ordenador rellena los descriptores, hace internamiente: tuberias[i][0] = fd_lectura, tuberias[i][1] = fd_escritura
                     perror("pipe");
                      exit(1);
                 }
             }
 
             // ===== Crear procesos hijos =====
-            for (i = 0; i< numComandos; i++) {
+            for (i = 0; i< numComandos; i++) { // si tengo A | B | C | D son 4 coandos, entonces 4 hijos uno por cada comando
                 hijos[i] = fork();
                 if (hijos[i] < 0) {
                     perror("fork");
                     exit(1);
                 }else if (hijos[i] == 0) {
-                    // ==============================
-                    //           HIJO k
-                    // ==============================
+                    //  HIJO i
+                    //cada hijo debe: 
+                    //leer de la tubería anterior (menos el primero)
+                    //escribir en la tubería siguiente (menos el último)
+                    //hacer sus redirecciones
+                    //ejecutar su comando con execvp
 
                     // ----- 1. Redirecciones especiales -----
-                    // Entrada estándar (solo primer mandato)
+                    // Entrada estándar (SOLO PRIMER MANDATO)
                     if (i == 0 && line->redirect_input != NULL) {
                         descriptorEntrada = open(line->redirect_input, O_RDONLY);
                         if (descriptorEntrada < 0) { 
@@ -276,7 +292,7 @@ int main(void) {
                     }
                 
 
-                    // Salida estándar (solo último mandato)
+                    // Salida estándar (SOLO ULTIMO MANDATO)
                     if (i == numComandos - 1 && line->redirect_output != NULL) {
                         descriptorSalida = open(line->redirect_output, O_WRONLY|O_CREAT|O_TRUNC, 0666);
                         if (descriptorSalida < 0) { 
@@ -290,11 +306,14 @@ int main(void) {
                     // ----- 2. Conectar pipes según la posición -----
 
                     // Si NO es el primer comando → su stdin viene del pipe anterior
+                    //si es cmd1 lee de tuberias[0][0], si es cmd2 lee de tuberias[1][0] y asi
+                    //el segundo valor indica lectura el primero el numero de tuberia
                     if (i > 0) {
-                        dup2(tuberias[i-1][0], STDIN_FILENO);
+                        dup2(tuberias[i-1][0], STDIN_FILENO); //lee de la tuberia 
                     }
 
                     // Si NO es el último comando → su stdout va al pipe siguiente
+                    //si es cmd 0 escribe en tuberias[0][1], si es cmd 1 escribe en tuberias[1][1]
                     if (i < numComandos - 1) {
                         dup2(tuberias[i][1], STDOUT_FILENO);
                     }
@@ -306,6 +325,7 @@ int main(void) {
                     }
 
                     // ----- 4. Exec -----
+                    //ejcuta el comando real
                     execvp(line->commands[i].filename, line->commands[i].argv);
                     perror("execvp hijo");
                     exit(1);
@@ -314,15 +334,20 @@ int main(void) {
 
             // ====== PADRE ======
             // Cerrar tuberías
+            //los hijos ya se fueron por execvp asiq eu aqui el àdre termina de cerrar todo lo que no necesita, esperar a que tdoos los hijos temrines y liberar la memoria usada
+            
+            //cierra tuberias
             for (i = 0; i < numComandos - 1; i++) {
                 close(tuberias[i][0]);
                 close(tuberias[i][1]);
             }
 
-            // Esperar a TODOS los hijos
+            // Esperar a TODOS los hijos, para que la minishell no imprima ==> antes de que acabe el pipeline
             for (i = 0; i < numComandos; i++) {
-                waitpid(hijos[i], NULL, 0);
+                waitpid(hijos[i], NULL, 0); //bloquea hasta que el hijo temrina
             }
+
+            //liberar memoria usada
             free(tuberias);
             free(hijos);
         }
