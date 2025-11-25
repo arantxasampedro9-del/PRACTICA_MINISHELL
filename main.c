@@ -27,6 +27,8 @@ int main(void) {
     int numComandos;
     int **tuberias;
     pid_t *hijos;
+    char *argumento;
+    int miUmask = 0022; // mascara inicial por defecto
     
 
     printf("==> "); 
@@ -52,16 +54,28 @@ int main(void) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
         }
+<<<<<<< HEAD
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
             //comprueba que solo se haya pasado un mandato
             //y que el mandtao pasado sea "exit"
+=======
+        //CUARTO PUNTO
+        //-----exit------
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "exit") == 0) {
+>>>>>>> 73d1f1e (cma)
             printf("Saliendo...\n");
             exit(0);
         }
 
+<<<<<<< HEAD
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
             //comprueba que solo se haya pasado un mandato
             //y que el mandato pasado sea "cd"
+=======
+    
+        // ---------- CD ----------
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "cd") == 0) {
+>>>>>>> 73d1f1e (cma)
 
             // Si no hay argumentos → ir a HOME , es decir si se pasa solo cd debe indicarme la ruta del home
             if (line->commands[0].argc == 1) {
@@ -100,7 +114,61 @@ int main(void) {
             
         }
 
-        //primer punto
+        //QUINTO PUNTO
+        //umask
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
+
+            if (line->commands[0].argc == 1) {
+            // imprimir exactamente en formato 0XYZ
+                printf("0%03o\n", miUmask);
+                printf("==> ");
+                fflush(stdout);
+                continue;
+            }
+
+            // Hay argumento: debe ser exactamente "0XYZ"
+            argumento = line->commands[0].argv[1];
+
+            // Validación: longitud EXACTA de 4 caracteres
+            if (strlen(argumento) != 4) {
+                fprintf(stderr, "umask: formato inválido (use 0XYZ)\n");
+                printf("==> ");
+                fflush(stdout);
+                continue;
+            }
+
+            // Validación: primer carácter debe ser '0'
+            if (argumento[0] != '0') {
+                fprintf(stderr, "umask: debe comenzar con 0\n");
+                printf("==> ");
+                fflush(stdout);
+                continue;
+            }
+
+            // Validación: los otros tres deben ser octales (0-7)
+            if (argumento[1] < '0' || argumento[1] > '7' || argumento[2] < '0' || argumento[2] > '7' ||argumento[3] < '0' || argumento[3] > '7') {
+
+                fprintf(stderr, "umask: sólo dígitos octales 0–7\n");
+                printf("==> ");
+                fflush(stdout);
+                continue;
+            }
+
+            // Convertir cadena octal → entero
+            int nueva = strtol(argumento, NULL, 8);
+
+            // Guardamos en nuestra umask interna
+            miUmask = nueva;
+
+            // También la aplicamos a nivel de sistema
+            umask(miUmask);
+
+            printf("==> ");
+            fflush(stdout);
+            continue;
+        }
+
+        //PRIMER PUNTO
         //line es la estructura que te devuelve el parser tline
         //line->background vale 0 → NO es en background.
         if (line->ncommands == 1 && !line->background) { //se ejecuta cuando solo hay un mandato y !0 = 1 = foreground, si el parser ve el "&" al final pone line->background a 1
@@ -156,6 +224,7 @@ int main(void) {
             // Padre espera, espera a un hijo concreto a terminar 
                 waitpid(pid1, NULL, 0);
             }
+        //SEGUNDO PUNTO
         }else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
             if (pipe(tub) < 0) { //si la creacion de la tuberia es menor que 0 es que hay error
                 perror("pipe");
@@ -231,6 +300,7 @@ int main(void) {
 
             waitpid(h1, NULL, 0);
             waitpid(h2, NULL, 0);
+        //TERCER PUNTO
         }else if (line->ncommands > 2 && !line->background) {
 
             numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
