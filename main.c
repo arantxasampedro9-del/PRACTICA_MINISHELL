@@ -179,8 +179,16 @@ int main(void) {
 
             numComandos=line->ncommands; 
             tuberias = malloc((numComandos - 1) * sizeof(int[2]));
+            if (tuberias == NULL) {
+                perror("malloc tuberias");
+                exit(1);
+            }
+        
             hijos = malloc(numComandos * sizeof(pid_t));   
-
+            if (hijos == NULL) {
+                perror("malloc hijos");
+                exit(1);
+            }
             // ===== Crear las tuberías necesarias =====
             for (i = 0; i < numComandos - 1; i++) {
                 if (pipe(tuberias[i]) < 0) {
