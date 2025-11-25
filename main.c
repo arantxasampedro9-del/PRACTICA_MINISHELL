@@ -156,7 +156,7 @@ int main(void) {
                 continue;
             }
 
-            // Convertir cadena octal → entero
+            // Convertir cadena → entero (en este caso es octal, 8)
             nuevaMascara = strtol(argumento, NULL, 8);
             //argumento → contiene algo como "0077"
             //NULL, una variable donde strtol guardará la dirección del primer carácter que NO formó parte del número, no nos interesa asique null
