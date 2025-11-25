@@ -392,11 +392,7 @@ int main(void) {
             waitpid(h1, NULL, 0);
             waitpid(h2, NULL, 0);
         //TERCER PUNTO*/
-<<<<<<< HEAD
-        }else if (line->ncommands > 2) {
-=======
         }else if (line->ncommands >= 2) {
->>>>>>> 81668f0 (c)
 
             numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
             // (type*)malloc(n_bytes), pero en C moderno no hace falta el tipo 
