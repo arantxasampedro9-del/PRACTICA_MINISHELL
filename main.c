@@ -179,11 +179,18 @@ int main(void) {
 
             numComandos=line->ncommands; 
             tuberias = malloc((numComandos - 1) * sizeof(int[2]));
+<<<<<<< HEAD
             if (tuberias == NULL) {
                 perror("malloc tuberias");
                 exit(1);
             }
         
+=======
+            for (i = 0; i < numComandos - 1; i++) {
+                tuberias[i] = malloc(2 * sizeof(int));
+            }   
+                    
+>>>>>>> 8f261ab (c)
             hijos = malloc(numComandos * sizeof(pid_t));   
             if (hijos == NULL) {
                 perror("malloc hijos");
