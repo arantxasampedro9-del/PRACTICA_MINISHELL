@@ -30,6 +30,7 @@ int main(void) {
     pid_t *hijos;
     char *argumento;
     int miUmask = 0022; // mascara inicial por defecto
+    int nuevaMascara;
     
 
     printf("==> "); 
@@ -110,29 +111,34 @@ int main(void) {
         }
 
         //QUINTO PUNTO
-        //umask
+        //umask es un comando interno que define qué permisos NO se aplican cuando se crea un archivo o directorio nuevo.
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
+            // comprobamos que el mandato escrito es umask
 
-            if (line->commands[0].argc == 1) {
+            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask
             // imprimir exactamente en formato 0XYZ
-                printf("0%03o\n", miUmask);
+                printf("0%03o\n", miUmask); //imprime por defecto 0022
+                //%o → imprimir en octal
+                //%03o → imprimir con 3 dígitos, completando con ceros si hace falta
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
 
-            // Hay argumento: debe ser exactamente "0XYZ"
+            // Hay argumento: debe ser exactamente "0XYZ" 
+            //si hay algo mas aparte de umask, lo guardamos en argumento. Ej. 022 
+            //el argumento debe tener el formato 0XYZ es decir 4 caracteres
             argumento = line->commands[0].argv[1];
 
             // Validación: longitud EXACTA de 4 caracteres
-            if (strlen(argumento) != 4) {
+            if (strlen(argumento) != 4) { // si no tiene 4 caracteres no etsa en el formato adecuado
                 fprintf(stderr, "umask: formato inválido (use 0XYZ)\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
 
-            // Validación: primer carácter debe ser '0'
+            // Validación: primer carácter debe ser '0' si o si, porque en octal se representan asi
             if (argumento[0] != '0') {
                 fprintf(stderr, "umask: debe comenzar con 0\n");
                 printf("==> ");
@@ -141,6 +147,7 @@ int main(void) {
             }
 
             // Validación: los otros tres deben ser octales (0-7)
+            //esto evita letras y numeros invalidos
             if (argumento[1] < '0' || argumento[1] > '7' || argumento[2] < '0' || argumento[2] > '7' ||argumento[3] < '0' || argumento[3] > '7') {
 
                 fprintf(stderr, "umask: sólo dígitos octales 0–7\n");
@@ -150,14 +157,19 @@ int main(void) {
             }
 
             // Convertir cadena octal → entero
-            int nueva = strtol(argumento, NULL, 8);
+            nuevaMascara = strtol(argumento, NULL, 8);
+            //argumento → contiene algo como "0077"
+            //NULL, una variable donde strtol guardará la dirección del primer carácter que NO formó parte del número, no nos interesa asique null
+            //8 es pasar en base octal 
 
             // Guardamos en nuestra umask interna
-            miUmask = nueva;
+            miUmask = nuevaMascara;
 
             // También la aplicamos a nivel de sistema
-            umask(miUmask);
-
+            umask(miUmask);  
+            // de esta forma si el usuario escribe umask se podra mostrar porque ya la tenemos guardada
+            //A partir de esa línea: cuando tu minishell cree nuevos archivos o directorios, se aplicarán los permisos según esa nueva umask.
+            
             printf("==> ");
             fflush(stdout);
             continue;
