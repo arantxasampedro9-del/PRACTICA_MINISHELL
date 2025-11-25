@@ -1,7 +1,3 @@
-<<<<<<< HEAD
 hola gato perro
+hola hola hola
 perro hola raton
-=======
-hola gato perro
-perro hola ratón
->>>>>>> ceedd71 (j)

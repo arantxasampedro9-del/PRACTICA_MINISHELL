@@ -313,7 +313,7 @@ int main(void) {
                 waitpid(pid1, NULL, 0);
             }
         //SEGUNDO PUNTO
-        }else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
+        /*}else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
             if (pipe(tub) < 0) { //si la creacion de la tuberia es menor que 0 es que hay error
                 perror("pipe");
                 continue;
@@ -390,7 +390,7 @@ int main(void) {
 
             waitpid(h1, NULL, 0);
             waitpid(h2, NULL, 0);
-        //TERCER PUNTO
+        //TERCER PUNTO*/
         }else if (line->ncommands > 2) {
 
             numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
@@ -446,8 +446,6 @@ int main(void) {
 
                     if (!line->background){
                         signal(SIGINT, SIG_DFL);
-                    }else{
-                        signal(SIGINT, SIG_IGN);
                     } 
                     // ----- 1. Redirecciones especiales -----
                     // Entrada estándar (SOLO PRIMER MANDATO)
