@@ -14,6 +14,8 @@ int main(void) {
     int descriptorEntrada;
     int descriptorSalida;
 
+    int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
+    pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
     
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
@@ -94,28 +96,26 @@ int main(void) {
             // Padre espera, espera a un hijo concreto a terminar 
                 waitpid(pid1, NULL, 0);
             }
-        }else if (line->ncommands == 2 && !line->background) {
-            int tub[2];
-            pid_t h1, h2;
-
-            if (pipe(tub) < 0) {
+        }else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
+            
+            if (pipe(tub) < 0) { //si la creacion de la tuberia es menor que 0 es que hay error
                 perror("pipe");
                 continue;
             }
+            //tub[1] → escritura
+            //tub[0] → lectura
 
-            // ===== Hijo 1: primer mandato (lee de stdin, escribe en la tubería) =====
-            h1 = fork();
+            h1 = fork(); //creamos el primer hijo
+
             if (h1 < 0) {
-                perror("fork hijo1");
-                // si falla, cerramos la tubería y seguimos
-                close(tub[0]);
-                close(tub[1]);
-                continue;
+                perror("fork hijo1"); //deberiamos cambiarlo por fprintf(stdrr...)
+                exit(1);
             } else if (h1 == 0) {
-                // En el hijo1 no se usa el extremo de lectura
-                close(tub[0]);
+                //hijo 1 - ejecutamos el primer comando
 
-                // Posible redirección de entrada: < fichero (afecta al primer mandato)
+                close(tub[0]); //el primer hijo no lee escribe al hijo 2 la slaida del primer mandato
+
+                // si el primer mandto tiene redireccion de entrada hay que tenerlo en cuenta
                 if (line->redirect_input != NULL) {
                     descriptorEntrada = open(line->redirect_input, O_RDONLY);
                     if (descriptorEntrada < 0) {
@@ -128,8 +128,8 @@ int main(void) {
                 }
 
                 // Su salida estándar va a la tubería
-                dup2(tub[1], STDOUT_FILENO);
-                close(tub[1]);
+                dup2(tub[1], STDOUT_FILENO); //copiamos la salida del comando que estara en la pantalla en la parte de escritura
+                close(tub[1]);//ya usada la cerramos
 
                 execvp(line->commands[0].filename, line->commands[0].argv);
                 perror("execvp hijo1");
@@ -140,9 +140,7 @@ int main(void) {
             h2 = fork();
             if (h2 < 0) {
                 perror("fork hijo2");
-                close(tub[0]);
-                close(tub[1]);
-                continue;
+                exit(2);
             } else if (h2 == 0) {
                 // En el hijo2 no se usa el extremo de escritura
                 close(tub[1]);
