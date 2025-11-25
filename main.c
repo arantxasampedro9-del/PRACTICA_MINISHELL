@@ -9,7 +9,7 @@
 int main(void) {
     char buf[1024];
     tline * line;
-    int i,j;
+    int i, j;
     pid_t pid1;
     int descriptorEntrada;
     int descriptorSalida;
@@ -20,7 +20,6 @@ int main(void) {
     int numComandos = line->ncommands;
     int tuberias[numComandos - 1][2];
     pid_t hijos[numComandos];
-    int i, j;
     
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
