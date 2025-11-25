@@ -55,23 +55,23 @@ int main(void) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
         }
-        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
+        
             //comprueba que solo se haya pasado un mandato
             //y que el mandtao pasado sea "exit"
         //CUARTO PUNTO
         //-----exit------
-        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "exit") == 0) {
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
             printf("Saliendo...\n");
             exit(0);
+            
         }
 
-        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
-            //comprueba que solo se haya pasado un mandato
-            //y que el mandato pasado sea "cd"
+        
     
         // ---------- CD ----------
-        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "cd") == 0) {
-
+        //comprueba que solo se haya pasado un mandato
+        //y que el mandato pasado sea "cd"
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
             // Si no hay argumentos → ir a HOME , es decir si se pasa solo cd debe indicarme la ruta del home
             if (line->commands[0].argc == 1) {
                 directorio = getenv("HOME"); //getenv lo que hace es obtener el valor de la variable de entorno HOME ya definida
