@@ -197,8 +197,8 @@ int main(void) {
         //jobs
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
 
-            for (int k = 0; k < num_bg; k++) {
-                printf("[%d]  Running  %s &\n", k+1, lista_bg[k].comando);
+            for (i = 0; i < num_bg; i++) {
+                printf("[%d]  Running  %s &\n", i+1, lista_bg[i].comando);
             }
 
                 printf("==> ");
@@ -515,7 +515,7 @@ int main(void) {
 
                 lista_bg[num_bg].id = num_bg + 1;
                 num_bg++;
-
+ 
                 // Mensaje estilo bash
                 printf("[%d] %d\n", num_bg, hijos[numComandos - 1]);
             }
