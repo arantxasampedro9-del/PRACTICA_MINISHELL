@@ -17,9 +17,9 @@ int main(void) {
     int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
     pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
 
-    int numComandos = line->ncommands;
-    int tuberias[numComandos - 1][2];
-    pid_t hijos[numComandos];
+    int numComandos;
+    int **tuberias;
+    pid_t *hijos;
     
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
@@ -101,7 +101,6 @@ int main(void) {
                 waitpid(pid1, NULL, 0);
             }
         }else if (line->ncommands == 2 && !line->background) { //ejecutamos mandato1 | mandato2 sin que este en background
-            
             if (pipe(tub) < 0) { //si la creacion de la tuberia es menor que 0 es que hay error
                 perror("pipe");
                 continue;
@@ -178,7 +177,9 @@ int main(void) {
             waitpid(h2, NULL, 0);
         }else if (line->ncommands > 2 && !line->background) {
 
-
+            numComandos=line->ncommands; 
+            tuberias[numComandos - 1][2];   
+            hijos[numComandos];       
             // ===== Crear las tuberías necesarias =====
             for (i = 0; i < numComandos - 1; i++) {
                 if (pipe(tuberias[i]) < 0) {
