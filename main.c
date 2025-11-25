@@ -517,13 +517,16 @@ int main(void) {
                 }
             } else {
             // -------- BACKGROUND --------
-                lista_bg[num_bg].pid = hijos[numComandos - 1];
-
+            //el pipeline es una cadena de comandos conectado con |, donde la salida de un comando pasa a ser la entrada del siguiente
+                lista_bg[num_bg].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
+                //el proceso que representa el pipeline es el ultimo hijo, asi que guardas su PID para poder listarlo con jobs, traerlo con fg y controlarlo
+                
+                //guardamos el comando que escribio el usuario, la linea completa, eso es lo que luego veremos en jobs
                 strncpy(lista_bg[num_bg].comando, buf, sizeof(lista_bg[num_bg].comando));
-                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0';
+                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0'; //aqui pone el fin de linea
 
-                lista_bg[num_bg].id = num_bg + 1;
-                num_bg++;
+                lista_bg[num_bg].id = num_bg + 1; //le asignamos un numero de job para poder
+                num_bg++; //actualizamos los jobs que hay en background
  
                 // Mensaje estilo bash
                 printf("[%d] %d\n", num_bg, hijos[numComandos - 1]);
