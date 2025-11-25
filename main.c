@@ -16,6 +16,10 @@ int main(void) {
     pid_t pid1; 
     int descriptorEntrada;
     int descriptorSalida;
+    char *directorio;
+    char dirTemporal[1024];
+    char *home;
+    char ruta[1024];
 
     int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
     pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
@@ -24,6 +28,7 @@ int main(void) {
     int **tuberias;
     pid_t *hijos;
     
+
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
         line = tokenize(buf);
@@ -47,44 +52,44 @@ int main(void) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
         }
-        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "exit") == 0) {
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
+            //comprueba que solo se haya pasado un mandato
+            //y que el mandtao pasado sea "exit"
             printf("Saliendo...\n");
             exit(0);
         }
 
-        // ---------- CD ----------
-        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "cd") == 0) {
+        if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
+            //comprueba que solo se haya pasado un mandato
+            //y que el mandato pasado sea "cd"
 
-            char *dir;
-
-            // Si no hay argumentos → ir a HOME
+            // Si no hay argumentos → ir a HOME , es decir si se pasa solo cd debe indicarme la ruta del home
             if (line->commands[0].argc == 1) {
-                dir = getenv("HOME");
-                if (dir == NULL) {
+                directorio = getenv("HOME"); //getenv lo que hace es obtener el valor de la variable de entorno HOME ya definida
+                if (directorio == NULL) { 
                     fprintf(stderr, "No se encuentra $HOME\n");
-                    continue;
+                    continue; //para volver al bucle
                 }
             } else {
-                // cd carpeta
-                dir = line->commands[0].argv[1];
+                // si hay argumento es decir cd y algo mas : cd . el directorio tendra que tomar el valor de ese argumento
+                directorio = line->commands[0].argv[1];
+                
+                if (directorio[0] == '~') { //si es cd ~/Documentos es otra froma de acceder a home: /home/fati/Documentos
+                    home = getenv("HOME");
+        
+                    //creamos una cadena con la parte de home mas lo que venga despues
+                    strcpy(dirTemporal, home);
+                    strcat(dirTemporal, directorio + 1);
 
-                if (dir[0] == '~') {
-                    char *home = getenv("HOME");
-                    static char temp[1024];
-
-                    strcpy(temp, home);
-                    strcat(temp, dir + 1);
-
-                    dir = temp;
+                    directorio = dirTemporal;
                 }
             }
 
-            if (chdir(dir) < 0) {
-                perror("cd");
-            } else {
-                // Mostrar la ruta absoluta actual
-                char ruta[1024];
-                if (getcwd(ruta, sizeof(ruta)) != NULL) {
+            if (chdir(directorio) < 0) {//si la carpeta existe en nuestro ordenador sustituye la ruta por el directorio real
+                perror("cd");//error
+            } else {// ya estamos situadiso en el directorio actual y valido lo gaurdamos en ruta e imprimimos
+                // si si que existe entonces guarda un puntero a ruta en ruta para despues imprimirlo
+                if (getcwd(ruta, sizeof(ruta)) != NULL) { //
                     printf("%s\n", ruta);
                 }
             }
