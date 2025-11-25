@@ -9,7 +9,6 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/stat.h> // para umask
-//cambio
 
 //Cuando lanzas un comando con &, el padre (tu minishell) no espera al hijo y tiene que recordar ese proceso para luego poder:
 //Mostrarlo con jobs
@@ -26,6 +25,8 @@ typedef struct {
 
 
 int main(void) {
+    
+
     char buf[1024];
     tline * line;
     int i, j;
@@ -50,6 +51,7 @@ int main(void) {
     proceso_bg lista_bg[100];
     int num_bg = 0;
     
+    signal(SIGINT, SIG_IGN);
 
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
@@ -267,6 +269,7 @@ int main(void) {
                 //con el 0 se accede al primer mandato, porque ya hemos puesto el main.c antes y nos pone la => para poner los comandos 
                 //execvp(nombre del programa a ejecutar (comando), lista de argumentos argv (no se pone [0] porque queremos la lista entera))
                 
+                signal(SIGINT, SIG_DFL);
                 //CAMBIAR A FUNCION!!!!!!!!!!!
                 if (line->redirect_input != NULL) { //Si el puntero de entrada no apunta a un archivo nulo significa que apunta a un archivo yq ue hay redireccion de entrada
                     descriptorEntrada = open(line->redirect_input, O_RDONLY); 
@@ -325,6 +328,7 @@ int main(void) {
             } else if (h1 == 0) {
                 //hijo 1 - ejecutamos el primer comando
 
+                signal(SIGINT, SIG_DFL);
                 close(tub[0]); //el primer hijo no lee escribe al hijo 2 la salida del primer mandato
 
                 // si el primer mandto tiene redireccion de entrada hay que tenerlo en cuenta y abrirlo para lectura
@@ -354,6 +358,7 @@ int main(void) {
                 perror("fork hijo2");
                 exit(2);
             } else if (h2 == 0) {
+                signal(SIGINT, SIG_DFL);
                 // En el hijo2 no se usa el extremo de escritura
                 close(tub[1]); //el hijo 2 lo que va a hacer es leer lo que se recibe por la entrada estandar pero a traves de la tuberia que es donde ha escrito el otro hijo que ha leido la entrada 
 
@@ -438,6 +443,9 @@ int main(void) {
                     //hacer sus redirecciones
                     //ejecutar su comando con execvp
 
+                    if (!line->background){
+                        signal(SIGINT, SIG_DFL);
+                    } 
                     // ----- 1. Redirecciones especiales -----
                     // Entrada estándar (SOLO PRIMER MANDATO)
                     if (i == 0 && line->redirect_input != NULL) {
