@@ -57,6 +57,9 @@ int main(void) {
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
             //comprueba que solo se haya pasado un mandato
             //y que el mandtao pasado sea "exit"
+        //CUARTO PUNTO
+        //-----exit------
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "exit") == 0) {
             printf("Saliendo...\n");
             exit(0);
         }
@@ -64,6 +67,9 @@ int main(void) {
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
             //comprueba que solo se haya pasado un mandato
             //y que el mandato pasado sea "cd"
+    
+        // ---------- CD ----------
+        if (line->ncommands == 1 && line->commands[0].argc > 0 && line->commands[0].argv[0] != NULL && strcmp(line->commands[0].argv[0], "cd") == 0) {
 
             // Si no hay argumentos → ir a HOME , es decir si se pasa solo cd debe indicarme la ruta del home
             if (line->commands[0].argc == 1) {
@@ -87,10 +93,9 @@ int main(void) {
                 }
             }
 
-            if (chdir(directorio) < 0) { //lo que hace es cambiar el directorio actual de proceso al que tenemos guardado en directorio que es lo que acomapñaa al cd
+            if (chdir(directorio) < 0) {//si la carpeta existe en nuestro ordenador sustituye la ruta por el directorio real
                 perror("cd");//error
             } else {// ya estamos situadiso en el directorio actual y valido lo gaurdamos en ruta e imprimimos
-                //“Oye, ¿en qué directorio estoy ahora?” y lo guarda en ruta.
                 // si si que existe entonces guarda un puntero a ruta en ruta para despues imprimirlo
                 if (getcwd(ruta, sizeof(ruta)) != NULL) { //
                     printf("%s\n", ruta);
@@ -419,4 +424,3 @@ int main(void) {
     }
     return 0;
 }
-    
