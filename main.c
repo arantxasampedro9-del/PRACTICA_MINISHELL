@@ -178,8 +178,9 @@ int main(void) {
         }else if (line->ncommands > 2 && !line->background) {
 
             numComandos=line->ncommands; 
-            tuberias[numComandos - 1][2];   
-            hijos[numComandos];       
+            tuberias = malloc((numComandos - 1) * sizeof(int[2]));
+            hijos = malloc(numComandos * sizeof(pid_t));   
+
             // ===== Crear las tuberías necesarias =====
             for (i = 0; i < numComandos - 1; i++) {
                 if (pipe(tuberias[i]) < 0) {
@@ -237,7 +238,7 @@ int main(void) {
 
                     // ----- 3. Cerrar TODAS las tuberías -----
                     for (j = 0; j < numComandos - 1; j++) {
-                        close(tuberias[i][0]);
+                        close(tuberias[j][0]);
                         close(tuberias[j][1]);
                     }
 
@@ -259,6 +260,8 @@ int main(void) {
             for (i = 0; i < numComandos; i++) {
                 waitpid(hijos[i], NULL, 0);
             }
+            free(tuberias);
+            free(hijos);
         }
         printf("==> "); 
     }
