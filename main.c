@@ -16,6 +16,11 @@ int main(void) {
 
     int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
     pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
+
+    int numComandos = line->ncommands;
+    int tuberias[numComandos - 1][2];
+    pid_t hijos[numComandos];
+    int i, j;
     
     printf("==> "); 
     while (fgets(buf, 1024, stdin)) {
@@ -174,74 +179,70 @@ int main(void) {
             waitpid(h2, NULL, 0);
         }else if (line->ncommands > 2 && !line->background) {
 
-            int num_cmds = line->ncommands;
-            int pipes[num_cmds - 1][2];
-            pid_t hijos[num_cmds];
-            int k;
 
             // ===== Crear las tuberías necesarias =====
-            for (k = 0; k < num_cmds - 1; k++) {
-                if (pipe(pipes[k]) < 0) {
+            for (i = 0; i < numComandos - 1; i++) {
+                if (pipe(tuberias[i]) < 0) {
                     perror("pipe");
                      exit(1);
                 }
             }
 
             // ===== Crear procesos hijos =====
-            for (k = 0; k < num_cmds; k++) {
-                hijos[k] = fork();
-                if (hijos[k] < 0) {
+            for (i = 0; i< numComandos; i++) {
+                hijos[i] = fork();
+                if (hijos[i] < 0) {
                     perror("fork");
                     exit(1);
-                }else if (hijos[k] == 0) {
+                }else if (hijos[i] == 0) {
                     // ==============================
                     //           HIJO k
                     // ==============================
 
                     // ----- 1. Redirecciones especiales -----
                     // Entrada estándar (solo primer mandato)
-                    if (k == 0 && line->redirect_input != NULL) {
-                        int fd = open(line->redirect_input, O_RDONLY);
-                        if (fd < 0) { 
-                            perror("open redirect_input"); exit(1);
+                    if (i == 0 && line->redirect_input != NULL) {
+                        descriptorEntrada = open(line->redirect_input, O_RDONLY);
+                        if (descriptorEntrada < 0) { 
+                            perror("open redirect_input"); 
+                            exit(1);
                         }
-                        dup2(fd, STDIN_FILENO);
-                        close(fd);
+                        dup2(descriptorEntrada, STDIN_FILENO);
+                        close(descriptorEntrada);
                     }
                 
 
                     // Salida estándar (solo último mandato)
-                    if (k == num_cmds - 1 && line->redirect_output != NULL) {
-                        int fd = open(line->redirect_output, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-                        if (fd < 0) { 
+                    if (i == numComandos - 1 && line->redirect_output != NULL) {
+                        descriptorSalida = open(line->redirect_output, O_WRONLY|O_CREAT|O_TRUNC, 0666);
+                        if (descriptorSalida < 0) { 
                             perror("open redirect_output"); 
                             exit(1); 
                         }
-                        dup2(fd, STDOUT_FILENO);
-                        close(fd);
+                        dup2(descriptorSalida, STDOUT_FILENO);
+                        close(descriptorSalida);
                     }
 
                     // ----- 2. Conectar pipes según la posición -----
 
                     // Si NO es el primer comando → su stdin viene del pipe anterior
-                    if (k > 0) {
-                        dup2(pipes[k-1][0], STDIN_FILENO);
+                    if (i > 0) {
+                        dup2(tuberias[i-1][0], STDIN_FILENO);
                     }
 
                     // Si NO es el último comando → su stdout va al pipe siguiente
-                    if (k < num_cmds - 1) {
-                        dup2(pipes[k][1], STDOUT_FILENO);
+                    if (i < numComandos - 1) {
+                        dup2(tuberias[i][1], STDOUT_FILENO);
                     }
 
                     // ----- 3. Cerrar TODAS las tuberías -----
-                    int x;
-                    for (x = 0; x < num_cmds - 1; x++) {
-                        close(pipes[x][0]);
-                        close(pipes[x][1]);
+                    for (j = 0; j < numComandos - 1; j++) {
+                        close(tuberias[i][0]);
+                        close(tuberias[j][1]);
                     }
 
                     // ----- 4. Exec -----
-                    execvp(line->commands[k].filename, line->commands[k].argv);
+                    execvp(line->commands[i].filename, line->commands[i].argv);
                     perror("execvp hijo");
                     exit(1);
                 }
@@ -249,14 +250,14 @@ int main(void) {
 
             // ====== PADRE ======
             // Cerrar tuberías
-            for (k = 0; k < num_cmds - 1; k++) {
-                close(pipes[k][0]);
-                close(pipes[k][1]);
+            for (i = 0; i < numComandos - 1; i++) {
+                close(tuberias[i][0]);
+                close(tuberias[i][1]);
             }
 
             // Esperar a TODOS los hijos
-            for (k = 0; k < num_cmds; k++) {
-                waitpid(hijos[k], NULL, 0);
+            for (i = 0; i < numComandos; i++) {
+                waitpid(hijos[i], NULL, 0);
             }
         }
         printf("==> "); 
