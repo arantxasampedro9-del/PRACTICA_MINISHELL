@@ -143,10 +143,10 @@ int main(void) {
                 exit(2);
             } else if (h2 == 0) {
                 // En el hijo2 no se usa el extremo de escritura
-                close(tub[1]);
+                close(tub[1]); //el hijo 2 lo que va a hacer es leer lo que se recibe por la entrada estandar pero a traves de la tuberia que es donde ha escrito el otro hijo que ha leido la entrada 
 
                 // Su entrada estándar viene de la tubería
-                dup2(tub[0], STDIN_FILENO);
+                dup2(tub[0], STDIN_FILENO);   //ahora el stdin a punta a lo mismo que el extremo de lectura de la tuberia 
                 close(tub[0]);
 
                 // Posible redirección de salida: > fichero (afecta al segundo mandato)
