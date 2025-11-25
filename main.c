@@ -8,7 +8,7 @@
 #include <string.h>
 #include <limits.h>
 #include <unistd.h>
-#include <sys/stat.h>// para umask
+#include <sys/stat.h> // para umask
 
 int main(void) {
     char buf[1024];
@@ -56,8 +56,8 @@ int main(void) {
             }
         }
         
-            //comprueba que solo se haya pasado un mandato
-            //y que el mandtao pasado sea "exit"
+        //comprueba que solo se haya pasado un mandato
+        //y que el mandtao pasado sea "exit"
         //CUARTO PUNTO
         //-----exit------
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
@@ -65,8 +65,6 @@ int main(void) {
             exit(0);
             
         }
-
-        
     
         // ---------- CD ----------
         //comprueba que solo se haya pasado un mandato
