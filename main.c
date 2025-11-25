@@ -501,14 +501,31 @@ int main(void) {
                 close(tuberias[i][1]);
             }
 
-            // Esperar a TODOS los hijos, para que la minishell no imprima ==> antes de que acabe el pipeline
-            for (i = 0; i < numComandos; i++) {
-                waitpid(hijos[i], NULL, 0); //bloquea hasta que el hijo temrina
+            if (!line->background) {
+                // -------- FOREGROUND --------
+                for (i = 0; i < numComandos; i++) {
+                    waitpid(hijos[i], NULL, 0);
+                }
+            } else {
+            // -------- BACKGROUND --------
+                lista_bg[num_bg].pid = hijos[numComandos - 1];
+
+                strncpy(lista_bg[num_bg].comando, buf, sizeof(lista_bg[num_bg].comando));
+                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0';
+
+                lista_bg[num_bg].id = num_bg + 1;
+                num_bg++;
+
+                // Mensaje estilo bash
+                printf("[%d] %d\n", num_bg, hijos[numComandos - 1]);
             }
 
             //liberar memoria usada
             free(tuberias);
             free(hijos);
+            printf("==> ");
+            fflush(stdout);
+            continue;
         }
         printf("==> "); 
     }
