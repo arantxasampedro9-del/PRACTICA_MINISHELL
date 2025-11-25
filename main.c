@@ -105,17 +105,17 @@ int main(void) {
             //tub[1] → escritura
             //tub[0] → lectura
 
-            h1 = fork(); //creamos el primer hijo
+            h1 = fork(); //creamos el primer proceso hijo
 
-            if (h1 < 0) {
+            if (h1 < 0) { //si es menor que 0 el proceso da error
                 perror("fork hijo1"); //deberiamos cambiarlo por fprintf(stdrr...)
                 exit(1);
             } else if (h1 == 0) {
                 //hijo 1 - ejecutamos el primer comando
 
-                close(tub[0]); //el primer hijo no lee escribe al hijo 2 la slaida del primer mandato
+                close(tub[0]); //el primer hijo no lee escribe al hijo 2 la salida del primer mandato
 
-                // si el primer mandto tiene redireccion de entrada hay que tenerlo en cuenta
+                // si el primer mandto tiene redireccion de entrada hay que tenerlo en cuenta y abrirlo para lectura
                 if (line->redirect_input != NULL) {
                     descriptorEntrada = open(line->redirect_input, O_RDONLY);
                     if (descriptorEntrada < 0) {
