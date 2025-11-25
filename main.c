@@ -99,9 +99,10 @@ int main(void) {
                 }
             }
 
-            if (chdir(directorio) < 0) {//si la carpeta existe en nuestro ordenador sustituye la ruta por el directorio real
+            if (chdir(directorio) < 0) { //lo que hace es cambiar el directorio actual de proceso al que tenemos guardado en directorio que es lo que acomapñaa al cd
                 perror("cd");//error
             } else {// ya estamos situadiso en el directorio actual y valido lo gaurdamos en ruta e imprimimos
+                //“Oye, ¿en qué directorio estoy ahora?” y lo guarda en ruta.
                 // si si que existe entonces guarda un puntero a ruta en ruta para despues imprimirlo
                 if (getcwd(ruta, sizeof(ruta)) != NULL) { //
                     printf("%s\n", ruta);
