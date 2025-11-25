@@ -10,7 +10,7 @@ int main(void) {
     char buf[1024];
     tline * line;
     int i, j;
-    pid_t pid1;
+    pid_t pid1; 
     int descriptorEntrada;
     int descriptorSalida;
 
