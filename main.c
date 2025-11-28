@@ -9,6 +9,8 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/stat.h> // para umask
+#include <errno.h>
+#include <sys/types.h>
 
 //Cuando lanzas un comando con &, el padre (tu minishell) no espera al hijo y tiene que recordar ese proceso para luego poder:
 //Mostrarlo con jobs
@@ -45,10 +47,13 @@ int main(void) {
     int **tuberias;
     pid_t *hijos;
     char *argumento;
-    int miUmask = 0022; // mascara inicial por defecto
+    char *final;
+    long v;
+
+    mode_t miUmask; // mascara inicial por defecto
     int nuevaMascara;
 
-    proceso_bg *lista_bg=NULL; //hay limite maximo de procesos?
+    proceso_bg lista_bg[100]; //hay limite maximo de procesos?
     int num_bg = 0;
     
     signal(SIGINT, SIG_IGN);
@@ -137,6 +142,8 @@ int main(void) {
 
             if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask
             // imprimir exactamente en formato 0XYZ
+                miUmask = umask(0);
+                umask(miUmask);
                 printf("0%03o\n", miUmask); //imprime por defecto 0022
                 //%o → imprimir en octal
                 //%03o → imprimir con 3 dígitos, completando con ceros si hace falta
@@ -145,32 +152,15 @@ int main(void) {
                 continue;
             }
 
-            // Hay argumento: debe ser exactamente "0XYZ" 
-            //si hay algo mas aparte de umask, lo guardamos en argumento. Ej. 022 
-            //el argumento debe tener el formato 0XYZ es decir 4 caracteres
             argumento = line->commands[0].argv[1];
-
-            // Validación: longitud EXACTA de 4 caracteres
-            if (strlen(argumento) != 4) { // si no tiene 4 caracteres no etsa en el formato adecuado
-                fprintf(stderr, "umask: formato inválido (use 0XYZ)\n");
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-
-            // Validación: primer carácter debe ser '0' si o si, porque en octal se representan asi
-            if (argumento[0] != '0') {
-                fprintf(stderr, "umask: debe comenzar con 0\n");
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-
+            errno=0;
+            final = NULL;
+            v = strtol(argumento, &final, 8);
             // Validación: los otros tres deben ser octales (0-7)
             //esto evita letras y numeros invalidos
-            if (argumento[1] < '0' || argumento[1] > '7' || argumento[2] < '0' || argumento[2] > '7' ||argumento[3] < '0' || argumento[3] > '7') {
+            if (errno != 0 || final == argumento || *final != '\0' || v < 0 ) {
 
-                fprintf(stderr, "umask: sólo dígitos octales 0–7\n");
+                fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
@@ -183,7 +173,7 @@ int main(void) {
             //8 es pasar en base octal 
 
             // Guardamos en nuestra umask interna
-            miUmask = nuevaMascara;
+            miUmask = (mode_t) v;
 
             // También la aplicamos a nivel de sistema
             umask(miUmask);  
@@ -200,7 +190,7 @@ int main(void) {
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
             
             for (i = 0; i < num_bg; i++) { //recorre el numero de procesos que estan guardados en la estructura para justamente recorrerlos
-                printf("[%d]+  Running  %s \n", i+1, lista_bg[i].comando);
+                printf("[%d]  Running  %s &\n", i+1, lista_bg[i].comando);
                 // recorro todos los procesos que estaran guardados en un array dentro de la estrutura
                 //es decir tenemos un array para procesos, y a su vez un array para los comando
             }
@@ -381,32 +371,12 @@ int main(void) {
             } else {
             // -------- BACKGROUND --------
             //el pipeline es una cadena de comandos conectado con |, donde la salida de un comando pasa a ser la entrada del siguiente
-                lista_bg = realloc(lista_bg, (num_bg + 1) * sizeof(proceso_bg));
-                if (lista_bg == NULL) {
-                    perror("realloc");
-                    exit(1);
-                }
-
                 lista_bg[num_bg].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
                 //el proceso que representa el pipeline es el ultimo hijo, asi que guardas su PID para poder listarlo con jobs, traerlo con fg y controlarlo
                 
-                /// Hacer una copia del comando
-                char comando_limpio[1024];
-                strncpy(comando_limpio, buf, sizeof(comando_limpio));
-                comando_limpio[sizeof(comando_limpio)-1] = '\0';
-                /// 2. Eliminar salto de línea final
-                char *nl = strchr(comando_limpio, '\n');
-                if (nl){
-                    *nl = '\0';
-                } 
-                // Buscar el '&' y eliminarlo
-                char *amp = strchr(comando_limpio, '&');
-                if (amp != NULL) {
-                    *amp = '\0';  // Cortar la cadena aquí
-                }
-
-                // Guardar el comando limpio
-                strncpy(lista_bg[num_bg].comando, comando_limpio, sizeof(lista_bg[num_bg].comando));
+                //guardamos el comando que escribio el usuario, la linea completa, eso es lo que luego veremos en jobs
+                strncpy(lista_bg[num_bg].comando, buf, sizeof(lista_bg[num_bg].comando));
+                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0'; //aqui pone el fin de linea
 
                 lista_bg[num_bg].id = num_bg + 1; //le asignamos un numero de job para poder
                 num_bg++; //actualizamos los jobs que hay en background
@@ -416,13 +386,7 @@ int main(void) {
             }
 
             //liberar memoria usada
-            for (i = 0; i < numComandos - 1; i++) {
-                free(tuberias[i]);
-            }
             free(tuberias);
-
-            free(lista_bg);
-
             free(hijos);
             printf("==> ");
             fflush(stdout);
@@ -433,4 +397,5 @@ int main(void) {
     return 0;
     
         
-    }
+}
+
