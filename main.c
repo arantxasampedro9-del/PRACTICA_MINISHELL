@@ -9,6 +9,8 @@
 #include <limits.h>
 #include <unistd.h>
 #include <sys/stat.h> // para umask
+#include <errno.h>
+#include <sys/types.h>
 
 //Cuando lanzas un comando con &, el padre (tu minishell) no espera al hijo y tiene que recordar ese proceso para luego poder:
 //Mostrarlo con jobs
@@ -45,7 +47,10 @@ int main(void) {
     int **tuberias;
     pid_t *hijos;
     char *argumento;
-    int miUmask = 0022; // mascara inicial por defecto
+    char *final;
+    long v;
+
+    mode_t miUmask; // mascara inicial por defecto
     int nuevaMascara;
 
     proceso_bg lista_bg[100]; //hay limite maximo de procesos?
@@ -137,6 +142,8 @@ int main(void) {
 
             if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask
             // imprimir exactamente en formato 0XYZ
+                miUmask = umask(0);
+                umask(miUmask);
                 printf("0%03o\n", miUmask); //imprime por defecto 0022
                 //%o → imprimir en octal
                 //%03o → imprimir con 3 dígitos, completando con ceros si hace falta
@@ -145,32 +152,15 @@ int main(void) {
                 continue;
             }
 
-            // Hay argumento: debe ser exactamente "0XYZ" 
-            //si hay algo mas aparte de umask, lo guardamos en argumento. Ej. 022 
-            //el argumento debe tener el formato 0XYZ es decir 4 caracteres
             argumento = line->commands[0].argv[1];
-
-            // Validación: longitud EXACTA de 4 caracteres
-            if (strlen(argumento) != 4) { // si no tiene 4 caracteres no etsa en el formato adecuado
-                fprintf(stderr, "umask: formato inválido (use 0XYZ)\n");
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-
-            // Validación: primer carácter debe ser '0' si o si, porque en octal se representan asi
-            if (argumento[0] != '0') {
-                fprintf(stderr, "umask: debe comenzar con 0\n");
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-
+            errno=0;
+            final = NULL;
+            v = strtol(argumento, &final, 8);
             // Validación: los otros tres deben ser octales (0-7)
             //esto evita letras y numeros invalidos
-            if (argumento[1] < '0' || argumento[1] > '7' || argumento[2] < '0' || argumento[2] > '7' ||argumento[3] < '0' || argumento[3] > '7') {
+            if (errno != 0 || final == argumento || *final != '\0' || v < 0 ) {
 
-                fprintf(stderr, "umask: sólo dígitos octales 0–7\n");
+                fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
@@ -183,7 +173,7 @@ int main(void) {
             //8 es pasar en base octal 
 
             // Guardamos en nuestra umask interna
-            miUmask = nuevaMascara;
+            miUmask = (mode_t) v;
 
             // También la aplicamos a nivel de sistema
             umask(miUmask);  
