@@ -11,26 +11,17 @@
 #include <sys/stat.h> // para umask
 #include <errno.h>
 
-
-//Cuando lanzas un comando con &, el padre (tu minishell) no espera al hijo y tiene que recordar ese proceso para luego poder:
-//Mostrarlo con jobs
-//Recuperarlo con fg
-//Saber qué comando era
-//Saber su PID (para usar kill, waitpid, etc.)
-//Tener un identificador propio incremental como [1], [2], …
-
 typedef struct {
     pid_t pid;
     char comando[1024];
     int id;
-} proceso_bg;
+} trabajoBG;
 
-void redireccion_entrada(tline *line, int i, int *descriptorEntrada);
-void redireccion_salida(tline *line, int i, int numComandos, int *descriptorSalida);
+void redireccionEntrada(tline *line, int i, int *descriptorEntrada);
+void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida);
 
 int main(void) {
     
-
     char buf[1024];
     tline * line;
     int i, j, n, ultimo;
@@ -42,26 +33,19 @@ int main(void) {
     char *home;
     char ruta[1024];
     char comando_limpio[1024];
-
-    int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
-    pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
-
+    int tub[2]; 
+    pid_t hijo1, hijo2; //como son dos mandatos necesitamos dos procesos hijo
     int numComandos;
     int **tuberias;
     pid_t *hijos;
     char *argumento;
     char *final;
-    long v;
-
-    mode_t miUmask; // mascara inicial por defecto
-    int nuevaMascara;
-
+    mode_t miUmask; 
+    long nuevaMascara; //ES UN INT O UN LONG? PORQUE LUEGO CON STOL CAMBIA A INT
     pid_t estadoProceso;
-
-    proceso_bg *lista_bg=NULL; //hay limite maximo de procesos?
-    int num_bg = 0;
-
-    
+    trabajoBG *arrayTrabajos=NULL; 
+    int numTrabajos = 0; //son los trabajos del background
+    int id;
     signal(SIGINT, SIG_IGN);
 
     printf("==> "); 
@@ -87,52 +71,43 @@ int main(void) {
                 printf("  argumento %d: %s\n", j, line->commands[i].argv[j]);
             }
         }
-        
-        //comprueba que solo se haya pasado un mandato
-        //y que el mandtao pasado sea "exit"
-        //CUARTO PUNTO
-        //-----exit------
+        //-----exit------       
+        //comprueba que solo se haya pasado un mandato y que el mandtao pasado sea "exit"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
-            printf("Saliendo...\n");
+            printf("Saliendo de la shell ...\n");
             exit(0);
             
         }
     
-        // ---------- CD ----------
-        //comprueba que solo se haya pasado un mandato
-        //y que el mandato pasado sea "cd"
+        // ----------cd----------
+        //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "cd"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
-            // Si no hay argumentos → ir a HOME , es decir si se pasa solo cd debe indicarme la ruta del home
+            // Si no hay argumentos va a HOME
             if (line->commands[0].argc == 1) {
-                directorio = getenv("HOME"); //getenv lo que hace es obtener el valor de la variable de entorno HOME ya definida
+                directorio = getenv("HOME"); 
                 if (directorio == NULL) { 
-                    fprintf(stderr, "No se encuentra $HOME\n");
-                    continue; //para volver al bucle
+                    fprintf(stderr, "$HOME no existe\n");
+                    continue; 
                 }
             } else {
-                // si hay argumento es decir cd y algo mas : cd . el directorio tendra que tomar el valor de ese argumento
-                directorio = line->commands[0].argv[1]; // con esto coges el argumento que va despues de cd (commands[0]) con argv[1]
-                //ahora la variable directorio guarda la cadena que esta despues de cd
-                
+                // si hay argumento el directorio tendra que tomar el valor de ese argumento
+                directorio = line->commands[0].argv[1]; 
                 //comprueba si el primer caracter del argumento es ~ para asi convertirlo  de ~/Documentos a /home/usuario/Documentos
-                if (directorio[0] == '~') { //si es cd ~/Documentos es otra froma de acceder a home: /home/fati/Documentos
-                    home = getenv("HOME"); //obtiene la ruta de home
-        
-                    //cconstruye ruta completa
-                    strcpy(dirTemporal, home); //copia en dirTemporal el home
-                    strcat(dirTemporal, directorio + 1); //añade lo que habia despues de ~
-                    //directorio + 1 hace que saltes el primer caracter ~
-
-                    directorio = dirTemporal; //se guarda en directorio eso que hemos creado
+                if (directorio[0] == '~') { 
+                    home = getenv("HOME"); 
+                    //construye ruta completa
+                    strcpy(dirTemporal, home);
+                    strcat(dirTemporal, directorio + 1);
+                    directorio = dirTemporal; 
                 }
             }
-
-            if (chdir(directorio) == 0) {//si la carpeta existe en nuestro ordenador entra en el bucle y ya estamos dentro del directorio
-                if (getcwd(ruta, sizeof(ruta)) != NULL) { //obtener directorio actual, get current working directory, en ruta es donde va a escribir rl directorio donde estamos
+            //si la carpeta existe en nuestro ordenador entra en el if y ya estamos dentro del directorio
+            if (chdir(directorio) == 0) {
+                if (getcwd(ruta, sizeof(ruta)) != NULL) { 
                     printf("%s\n", ruta);
                 }
             } else {
-                perror("cd");//error
+                fprintf(stderr, "cd: No se encontro el directorio: %s %s\n", directorio, strerror(errno));
             }
 
             printf("==> ");
@@ -141,13 +116,10 @@ int main(void) {
             
         }
 
-        //QUINTO PUNTO
-        //umask es un comando interno que define qué permisos NO se aplican cuando se crea un archivo o directorio nuevo.
+        //--------umask------
+        //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "umask"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
-            // comprobamos que el mandato escrito es umask
-
             if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask
-            // imprimir exactamente en formato 0XYZ
                 miUmask = umask(0);
                 umask(miUmask);
                 printf("0%03o\n", miUmask); //imprime por defecto 0022
@@ -161,10 +133,12 @@ int main(void) {
             argumento = line->commands[0].argv[1];
             errno=0;
             final = NULL;
-            v = strtol(argumento, &final, 8);
-            // Validación: los otros tres deben ser octales (0-7)
-            //esto evita letras y numeros invalidos
-            if (errno != 0 || final == argumento || *final != '\0' || v < 0 ) {
+            // Convertir cadena → entero (en este caso es octal, 8)
+            nuevaMascara = strtol(argumento, NULL, 8);
+            //argumento → contiene algo como "0077"
+            //NULL, una variable donde strtol guardará la dirección del primer carácter que NO formó parte del número, no nos interesa asique null
+            //8 es pasar en base octal 
+            if (errno != 0 || final == argumento || *final != '\0' || nuevaMascara < 0 ) {
 
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
@@ -172,14 +146,8 @@ int main(void) {
                 continue;
             }
 
-            // Convertir cadena → entero (en este caso es octal, 8)
-            nuevaMascara = strtol(argumento, NULL, 8);
-            //argumento → contiene algo como "0077"
-            //NULL, una variable donde strtol guardará la dirección del primer carácter que NO formó parte del número, no nos interesa asique null
-            //8 es pasar en base octal 
-
             // Guardamos en nuestra umask interna
-            miUmask = (mode_t) v;
+            miUmask = (mode_t) nuevaMascara;
 
             // También la aplicamos a nivel de sistema
             umask(miUmask);  
@@ -191,36 +159,26 @@ int main(void) {
             continue;
         }
 
-        //jobs, comprobamos que es un mandato y es jobs
+        //--------jobs------
+        //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "jobs"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
             // Primero: limpiar los procesos que ya hayan terminado
             i = 0;
-            while (i < num_bg) { //recorremos los procesos que hay en backgrouund
-                estadoProceso = waitpid(lista_bg[i].pid, NULL, WNOHANG); 
-                //creamos un proceso para analizar como esta cada proceso/hijo
-                // nos situamos en el hijo que queremos averiguar si esta vivo o no
-                //la señal WNOHANG hace que no tengamos que esperar hatsa que el hijo termine,
-                //eso NO queremos dentro de jobs, porque impediría que la shell siga respondiendo
-                //waitpid devuelve 0  si el hijo esta vivo
-                //el pid si ha terminado ya
-                //-1 si hay error 
-                //entonces en estos dos ultimos casos debemos borrarlo de la lista
-
-                if (estadoProceso == lista_bg[i].pid || estadoProceso == -1) {
-                    // El proceso terminó → eliminarlo de la lista
-                    for (j = i; j < num_bg - 1; j++) {
-                        lista_bg[j] = lista_bg[j + 1];
+            while (i < numTrabajos) { //recorremos los procesos que hay en backgrouund
+                estadoProceso = waitpid(arrayTrabajos[i].pid, NULL, WNOHANG); //creamos un proceso para analizar como esta cada proceso/hijo
+                //si el estadoProceso toma el valor -1 o el del pid debemos borrarlo de la lista
+                if (estadoProceso == arrayTrabajos[i].pid || estadoProceso == -1) {
+                    for (j = i; j < numTrabajos - 1; j++) {
+                        arrayTrabajos[j] = arrayTrabajos[j + 1];
                     }
-                    num_bg--;
-                    continue;  // NO aumentar i para comprobar el que cayó en su lugar
+                    numTrabajos--;
+                    continue; 
                 }
                 i++;
             }
 
-            for (i = 0; i < num_bg; i++) { //recorre el numero de procesos que estan guardados en la estructura para justamente recorrerlos
-                printf("[%d]+  Running  %s &\n", i+1, lista_bg[i].comando);
-                // recorro todos los procesos que estaran guardados en un array dentro de la estrutura
-                //es decir tenemos un array para procesos, y a su vez un array para los comando
+            for (i = 0; i < numTrabajos; i++) { //recorre el numero de procesos que estan guardados en la estructura
+                printf("[%d]+  Running  %s &\n", i+1, arrayTrabajos[i].comando);
             }
 
                 printf("==> ");
@@ -228,27 +186,25 @@ int main(void) {
                 continue;
         }
 
-        //fg, nos asrguramos que es un mandato y es fg
+        //--------fg------
+        //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "fg"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "fg") == 0) {
-
-            int id; //creamos el id para el proceso que identificara en el background de forma univoca
-
-            // Caso "fg" sin argumentos → último trabajo
+            // Si "fg" no tiene argumentos implica que es el último trabajo
             if (line->commands[0].argc == 1) { //si el usuario escribe fg sin el id del proceso
-                if (num_bg == 0) { //entonces si no hay procesos volvemos
+                if (numTrabajos == 0) { //entonces si no hay procesos volvemos
                     fprintf(stderr, "fg: no hay trabajos\n");
                     printf("==> ");
                     fflush(stdout);
                     continue;
                 }
-                id = num_bg - 1; //si si que hay traemos a foreground el ultimo proceso mandado a background
+                id = numTrabajos - 1; //si si que hay traemos a foreground el ultimo proceso mandado a background
                 //Restamos 1 porque tu lista usa índices desde 0 (el usuario ve [1], [2], ...) 
             } else { //el otro caso es que ponga fg con el id del proceso
             // Caso "fg 2" por ejemplo
                 id = atoi(line->commands[0].argv[1]) - 1;
                 //el numero de proceso es el segundo argumento que pasa el usuario es decir  argv[1] si meto fg 2 seria el 2
                 //como 2 es el argv[1] e suna cadena lo pasamos a entero para que sea el id correcto
-                if (id < 0 || id >= num_bg) {// en estos casos no seria valido
+                if (id < 0 || id >= numTrabajos) {// en estos casos no seria valido
                     fprintf(stderr, "fg: identificador inválido\n");
                     printf("==> ");
                     fflush(stdout);
@@ -256,16 +212,16 @@ int main(void) {
                 }
             }
 
-            printf("%s\n", lista_bg[id].comando); //imprimimos el comando que queremos traer a fg que es el numero que tenga el id
+            printf("%s\n", arrayTrabajos[id].comando); //imprimimos el comando que queremos traer a fg que es el numero que tenga el id
 
             // Esperar a que termine el proceso
-            waitpid(lista_bg[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el proceos creado con ese id
+            waitpid(arrayTrabajos[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el proceos creado con ese id
 
             //cuando el proceso termina debemos eliminarlo de la lista
-            for (i = id; i < num_bg - 1; i++) {//recorremos todos los que se mantienen
-                lista_bg[i] = lista_bg[i+1]; //si borramos uno todos deben moverse hacia atras
+            for (i = id; i < numTrabajos - 1; i++) {//recorremos todos los que se mantienen
+                arrayTrabajos[i] = arrayTrabajos[i+1]; //si borramos uno todos deben moverse hacia atras
             }
-            num_bg--;//ahora hay uno menos, reducimos contador
+            numTrabajos--;//ahora hay uno menos, reducimos contador
 
             printf("==> ");
             fflush(stdout);
@@ -429,7 +385,7 @@ int main(void) {
         
     }
 
-void redireccion_entrada(tline *line, int i, int *descriptorEntrada) {
+void redireccionEntrada(tline *line, int i, int *descriptorEntrada) {
     // Entrada estándar (SOLO PRIMER MANDATO)
     if (i == 0 && line->redirect_input != NULL) {
 
@@ -444,7 +400,7 @@ void redireccion_entrada(tline *line, int i, int *descriptorEntrada) {
     }
 }
 
-void redireccion_salida(tline *line, int i, int numComandos, int *descriptorSalida) {
+void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida) {
     // Salida estándar (SOLO ULTIMO MANDATO)
     if (i == numComandos - 1 && line->redirect_output != NULL) {
 
