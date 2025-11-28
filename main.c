@@ -31,7 +31,7 @@ int main(void) {
 
     char buf[1024];
     tline * line;
-    int i, j;
+    int i, j, n, ultimo;
     pid_t pid1; 
     int descriptorEntrada;
     int descriptorSalida;
@@ -39,6 +39,7 @@ int main(void) {
     char dirTemporal[1024];
     char *home;
     char ruta[1024];
+    char comando_limpio[1024];
 
     int tub[2]; //creamos una tuberia para tener parte de lectura y escritura
     pid_t h1, h2; //como son dos mandatos necesitamos dos procesos hijo
@@ -53,8 +54,11 @@ int main(void) {
     mode_t miUmask; // mascara inicial por defecto
     int nuevaMascara;
 
+    pid_t estadoProceso;
+
     proceso_bg *lista_bg=NULL; //hay limite maximo de procesos?
     int num_bg = 0;
+
     
     signal(SIGINT, SIG_IGN);
 
@@ -187,9 +191,32 @@ int main(void) {
 
         //jobs, comprobamos que es un mandato y es jobs
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
-            
+            // Primero: limpiar los procesos que ya hayan terminado
+            i = 0;
+            while (i < num_bg) { //recorremos los procesos que hay en backgrouund
+                estadoProceso = waitpid(lista_bg[i].pid, NULL, WNOHANG); 
+                //creamos un proceso para analizar como esta cada proceso/hijo
+                // nos situamos en el hijo que queremos averiguar si esta vivo o no
+                //la señal WNOHANG hace que no tengamos que esperar hatsa que el hijo termine,
+                //eso NO queremos dentro de jobs, porque impediría que la shell siga respondiendo
+                //waitpid devuelve 0  si el hijo esta vivo
+                //el pid si ha terminado ya
+                //-1 si hay error 
+                //entonces en estos dos ultimos casos debemos borrarlo de la lista
+
+                if (estadoProceso == lista_bg[i].pid || estadoProceso == -1) {
+                    // El proceso terminó → eliminarlo de la lista
+                    for (j = i; j < num_bg - 1; j++) {
+                        lista_bg[j] = lista_bg[j + 1];
+                    }
+                    num_bg--;
+                    continue;  // NO aumentar i para comprobar el que cayó en su lugar
+                }
+                i++;
+            }
+
             for (i = 0; i < num_bg; i++) { //recorre el numero de procesos que estan guardados en la estructura para justamente recorrerlos
-                printf("[%d]+  Running  %s \n", i+1, lista_bg[i].comando);
+                printf("[%d]+  Running  %s &\n", i+1, lista_bg[i].comando);
                 // recorro todos los procesos que estaran guardados en un array dentro de la estrutura
                 //es decir tenemos un array para procesos, y a su vez un array para los comando
             }
@@ -379,24 +406,20 @@ int main(void) {
                 lista_bg[num_bg].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
                 //el proceso que representa el pipeline es el ultimo hijo, asi que guardas su PID para poder listarlo con jobs, traerlo con fg y controlarlo
                 
-                /// Hacer una copia del comando
-                char comando_limpio[1024];
-                strncpy(comando_limpio, buf, sizeof(comando_limpio));
-                comando_limpio[sizeof(comando_limpio)-1] = '\0';
-                /// 2. Eliminar salto de línea final
-                char *nl = strchr(comando_limpio, '\n');
-                if (nl){
-                    *nl = '\0';
-                } 
-                // Buscar el '&' y eliminarlo
-                char *amp = strchr(comando_limpio, '&');
-                if (amp != NULL) {
-                    *amp = '\0';  // Cortar la cadena aquí
+                strcpy(comando_limpio, "");
+                n = 0;
+
+                ultimo = line->ncommands - 1;
+
+                while (line->commands[ultimo].argv[n] != NULL) {
+                    strcat(comando_limpio, line->commands[ultimo].argv[n]);
+                    strcat(comando_limpio, " ");
+                    n++;
                 }
 
-                // Guardar el comando limpio
-                strncpy(lista_bg[num_bg].comando, comando_limpio, sizeof(lista_bg[num_bg].comando));
 
+                strncpy(lista_bg[num_bg].comando, comando_limpio, sizeof(lista_bg[num_bg].comando));
+                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0';
                 lista_bg[num_bg].id = num_bg + 1; //le asignamos un numero de job para poder
                 num_bg++; //actualizamos los jobs que hay en background
  
@@ -410,7 +433,6 @@ int main(void) {
             }
             free(tuberias);
 
-            free(lista_bg);
 
             free(hijos);
             printf("==> ");
@@ -419,6 +441,7 @@ int main(void) {
         }
         printf("==> "); 
     }
+    free(lista_bg);
     return 0;
     
         
