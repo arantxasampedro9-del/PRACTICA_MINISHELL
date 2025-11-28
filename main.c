@@ -317,10 +317,7 @@ int main(void) {
                 }
             }
 
-            // ====== PADRE ======
-            // Cerrar tuberías
-            //los hijos ya se fueron por execvp asiq eu aqui el àdre termina de cerrar todo lo que no necesita, esperar a que tdoos los hijos temrines y liberar la memoria usada
-            
+            // ----- PADRE -------
             //cierra tuberias
             for (i = 0; i < numComandos - 1; i++) {
                 close(tuberias[i][0]);
@@ -335,13 +332,13 @@ int main(void) {
             } else {
             // -------- BACKGROUND --------
             //el pipeline es una cadena de comandos conectado con |, donde la salida de un comando pasa a ser la entrada del siguiente
-                lista_bg = realloc(lista_bg, (num_bg + 1) * sizeof(proceso_bg));
-                if (lista_bg == NULL) {
+                arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG));
+                if (arrayTrabajos == NULL) {
                     perror("realloc");
                     exit(1);
                 }
 
-                lista_bg[num_bg].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
+                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
                 //el proceso que representa el pipeline es el ultimo hijo, asi que guardas su PID para poder listarlo con jobs, traerlo con fg y controlarlo
                 
                 strcpy(comando_limpio, "");
@@ -356,13 +353,13 @@ int main(void) {
                 }
 
 
-                strncpy(lista_bg[num_bg].comando, comando_limpio, sizeof(lista_bg[num_bg].comando));
-                lista_bg[num_bg].comando[sizeof(lista_bg[num_bg].comando)-1] = '\0';
-                lista_bg[num_bg].id = num_bg + 1; //le asignamos un numero de job para poder
-                num_bg++; //actualizamos los jobs que hay en background
+                strncpy(arrayTrabajos[numTrabajos].comando, comando_limpio, sizeof(arrayTrabajos[numTrabajos].comando));
+                arrayTrabajos[numTrabajos].comando[sizeof(arrayTrabajos[numTrabajos].comando)-1] = '\0';
+                arrayTrabajos[numTrabajos].id = numTrabajos + 1; //le asignamos un numero de job para poder
+                numTrabajos++; //actualizamos los jobs que hay en background
  
                 // Mensaje estilo bash
-                printf("[%d] %d\n", num_bg, hijos[numComandos - 1]);
+                printf("[%d] %d\n", numTrabajos, hijos[numComandos - 1]);
             }
 
             //liberar memoria usada
@@ -379,7 +376,7 @@ int main(void) {
         }
         printf("==> "); 
     }
-    free(lista_bg);
+    free(arrayTrabajos);
     return 0;
     
         
