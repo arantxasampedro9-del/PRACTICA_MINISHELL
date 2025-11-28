@@ -25,6 +25,8 @@ typedef struct {
     int id;
 } proceso_bg;
 
+void redireccion_entrada(tline *line, int i, int *descriptorEntrada);
+void redireccion_salida(tline *line, int i, int numComandos, int *descriptorSalida);
 
 int main(void) {
     
@@ -326,29 +328,9 @@ int main(void) {
                     if (!line->background){
                         signal(SIGINT, SIG_DFL);
                     } 
-                    // ----- 1. Redirecciones especiales -----
-                    // Entrada estándar (SOLO PRIMER MANDATO)
-                    if (i == 0 && line->redirect_input != NULL) {
-                        descriptorEntrada = open(line->redirect_input, O_RDONLY);
-                        if (descriptorEntrada < 0) { 
-                            perror("open redirect_input"); 
-                            exit(1);
-                        }
-                        dup2(descriptorEntrada, STDIN_FILENO);
-                        close(descriptorEntrada);
-                    }
-                
-
-                    // Salida estándar (SOLO ULTIMO MANDATO)
-                    if (i == numComandos - 1 && line->redirect_output != NULL) {
-                        descriptorSalida = open(line->redirect_output, O_WRONLY|O_CREAT|O_TRUNC, 0666);
-                        if (descriptorSalida < 0) { 
-                            perror("open redirect_output"); 
-                            exit(1); 
-                        }
-                        dup2(descriptorSalida, STDOUT_FILENO);
-                        close(descriptorSalida);
-                    }
+                    
+                    redireccion_entrada(line, i, &descriptorEntrada);
+                    redireccion_salida(line, i, numComandos, &descriptorSalida);
 
                     // ----- 2. Conectar pipes según la posición -----
 
@@ -446,3 +428,33 @@ int main(void) {
     
         
     }
+
+void redireccion_entrada(tline *line, int i, int *descriptorEntrada) {
+    // Entrada estándar (SOLO PRIMER MANDATO)
+    if (i == 0 && line->redirect_input != NULL) {
+
+        *descriptorEntrada = open(line->redirect_input, O_RDONLY);
+        if (*descriptorEntrada < 0) { 
+            perror("open redirect_input"); 
+            exit(1);
+        }
+
+        dup2(*descriptorEntrada, STDIN_FILENO);
+        close(*descriptorEntrada);
+    }
+}
+
+void redireccion_salida(tline *line, int i, int numComandos, int *descriptorSalida) {
+    // Salida estándar (SOLO ULTIMO MANDATO)
+    if (i == numComandos - 1 && line->redirect_output != NULL) {
+
+        *descriptorSalida = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (*descriptorSalida < 0) { 
+            perror("open redirect_output"); 
+            exit(1); 
+        }
+
+        dup2(*descriptorSalida, STDOUT_FILENO);
+        close(*descriptorSalida);
+    }
+}
