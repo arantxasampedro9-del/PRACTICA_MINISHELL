@@ -131,7 +131,7 @@ int main(void) {
             //errno=0; //ponemos errno a 0 para ver si luego strtol da error
             nuevaMascara = strtol(argumento, NULL, 8);
 
-            if (nuevaMascara < 0 ) {
+            if (nuevaMascara < 0 ) {  //errno != 0 || end == argumento || *end != '\0' || v < 0 || v > 0777
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
