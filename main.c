@@ -11,7 +11,6 @@
 #include <sys/stat.h> // para umask
 #include <errno.h>
 
-
 //para el jobs 
 typedef struct {
     pid_t pid;
@@ -64,8 +63,6 @@ int main(void) {
     pid_t hijo1, hijo2; //como son dos comandos necesitamos dos procesos hijo
     int **tuberias;
     pid_t *hijos;
-
-
 
     signal(SIGINT, SIG_IGN);
 
