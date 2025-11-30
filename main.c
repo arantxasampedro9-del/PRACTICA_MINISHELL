@@ -145,16 +145,22 @@ int main(void) {
                 fflush(stdout);
                 continue;
             }
-            argumento = line->commands[0].argv[1];
-            //errno=0; //ponemos errno a 0 para ver si luego strtol da error
-            nuevaMascara = strtol(argumento, NULL, 8);
+            errno = 0;
+            final = NULL; // char *final; (ya la tienes declarada arriba)
+            nuevaMascara = strtol(argumento, &final, 8);
 
-            if (nuevaMascara < 0 ) {  //errno != 0 || end == argumento || *end != '\0' || v < 0 || v > 0777
+            // Validación completa:
+            // - errno != 0: overflow u otros errores
+            // - final == argumento: no convirtió nada (ej: "hola")
+            // - *final != '\0': sobran caracteres (ej: "022abc")
+            // - rango permitido: 0000 a 0777
+            if (errno != 0 || final == argumento || *final != '\0' || nuevaMascara < 0 || nuevaMascara > 0777) {
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
+
             miUmask = (mode_t) nuevaMascara; // Guardamos en nuestra umask interna
             umask(miUmask); // Guardamos en nuestra umask interna  
             printf("==> ");
