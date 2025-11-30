@@ -119,8 +119,8 @@ int main(void) {
         //--------umask------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "umask"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
-            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask imprimimos el que este guardado, si nos ponen algo mas es porque quieren cambiarlo a una nueva mascara
-                miUmask = umask(0); 
+            if (line->commands[0].argc == 1) { //este caso es en el que el usuario solo escribe umask sin ningun argumento, imprimimos el ultimo guardado. 
+                miUmask = umask(0); // lee la actual peor lo pone a 0 temporalmente porque si no la imprimir umask sale un numero super largo y mal
                 umask(miUmask);
                 printf("0%03o\n", miUmask); 
                 printf("==> ");
@@ -129,14 +129,20 @@ int main(void) {
             }
             argumento = line->commands[0].argv[1];
             //errno=0; //ponemos errno a 0 para ver si luego strtol da error
-            nuevaMascara = strtol(argumento, NULL, 8);
+            //nuevaMascara = strtol(argumento, NULL, 8);  si hicieramos esto, con NULL no se sabe si la conversion fue valida por eso normalmento se usa char *end y errno, por ejemplo umask hola, devuelve 0 y se aceptaria
+            errno = 0; //errno es una funcion que se usa para detectar errores la usan funciones como strtol open read etc
+            final = NULL; 
+            nuevaMascara = strtol(argumento, &final, 8);
 
-            if (nuevaMascara < 0 ) {  //errno != 0 || end == argumento || *end != '\0' || v < 0 || v > 0777
+            //la validacion del if: errno != 0: overflow u otros errores, final == argumento: no convirtio nada porque ha habido un error no ha avanzado "umask hola", el rango permitido
+
+            if ( errno != 0 || final == argumento || *final != '\0'||nuevaMascara < 0 || nuevaMascara > 0777) {  
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
+            
             miUmask = (mode_t) nuevaMascara; // Guardamos en nuestra umask interna
             umask(miUmask); // Guardamos en nuestra umask interna  
             printf("==> ");
