@@ -10,9 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h> // para umask
 #include <errno.h>
-
-
-//para el jobs 
+//hora
 typedef struct {
     pid_t pid;
     char comando[1024];
@@ -23,50 +21,31 @@ void redireccionEntrada(tline *line, int i, int *descriptorEntrada);
 void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida);
 
 int main(void) {
+    
+    char buf[1024];
     tline * line;
-
+    int i, j, n, ultimo;
+    pid_t pid1; 
     int descriptorEntrada;
     int descriptorSalida;
-
-    int i, j, n;
-
-    char buf[1024];
-
-    int ultimo;
-    pid_t pid1; 
-
-    //cd
     char *directorio;
     char dirTemporal[1024];
     char *home;
     char ruta[1024];
-
-    //umask
+    char comandoNuevo[1024];
+    int tub[2]; 
+    pid_t hijo1, hijo2; //como son dos mandatos necesitamos dos procesos hijo
+    int numComandos;
+    int **tuberias;
+    pid_t *hijos;
     char *argumento;
     char *final;
     mode_t miUmask; 
-    long nuevaMascara;
-
-     //jobs
+    long nuevaMascara; //ES UN INT O UN LONG? PORQUE LUEGO CON STOL CAMBIA A INT
     pid_t estadoProceso;
-
-    //fg
-    int id; 
-
-    //jobs y fg
     trabajoBG *arrayTrabajos=NULL; 
     int numTrabajos = 0; //son los trabajos del background
-
-    //para la parte de control de comandos
-    int numComandos;
-    char comandoNuevo[1024];
-    int tub[2]; 
-    pid_t hijo1, hijo2; //como son dos comandos necesitamos dos procesos hijo
-    int **tuberias;
-    pid_t *hijos;
-
-
-
+    int id;
     signal(SIGINT, SIG_IGN);
 
     printf("==> "); 
@@ -383,4 +362,5 @@ void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalid
         dup2(*descriptorSalida, STDOUT_FILENO);
         close(*descriptorSalida);
     }
+
 }
