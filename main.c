@@ -284,24 +284,33 @@ int main(void) {
                     waitpid(hijos[i], NULL, 0);
                 }
             } else { //background
-                arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG));
+                arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG)); 
+                //como puede haber ya huecos del array creados de otros comandos en backround es necesario que en cada iteracion de uno de ellos redimensionemos la memoria porque con malloc podria noc caber
+                //esto es ara genera un nuevo trabajo en el array de trabajos y debe ser manteniendo el numero
+                //de elementos que habia antes + 1 es decir: numTrabajos +1 del stipo TrabajosBG que es nuestra estructura
+
                 if (arrayTrabajos == NULL) {
                     fprintf(stderr, "Error de reasignacion de memoria");
                     exit(1);
                 }
-                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; 
-                strcpy(comandoNuevo, "");
-                n = 0;
-                ultimo = line->ncommands - 1;
 
-                while (line->commands[ultimo].argv[n] != NULL) {
-                    strcat(comandoNuevo, line->commands[ultimo].argv[n]);
+                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; 
+                
+                strcpy(comandoNuevo, ""); //creamos una cadena vacia
+                n = 0; //indice para recorrer todas las palabras del comando ls  -l es argv[0] -l es argv[1] por ejemplo
+                ultimo = line->ncommands - 1; // calcula el índice del último comando en la línea EL QUE NOS INTERESA
+
+                while (line->commands[ultimo].argv[n] != NULL) { //siempre querremos guardra el ultimo comando porque es el que va a background
+                    strcat(comandoNuevo, line->commands[ultimo].argv[n]); //recorremos todos los caracteres del ultimo argumento para poder guardarlo en una cadena de forma limpi hasta llegar al final de el
+                    // si argv = {"ls", "-l", "/tmp", NULL} → comandoNuevo se convierte en "ls -l /tmp "
                     strcat(comandoNuevo, " ");
                     n++;
                 }
+
                 strncpy(arrayTrabajos[numTrabajos].comando, comandoNuevo, sizeof(arrayTrabajos[numTrabajos].comando));
-                arrayTrabajos[numTrabajos].comando[sizeof(arrayTrabajos[numTrabajos].comando)-1] = '\0';
-                arrayTrabajos[numTrabajos].id = numTrabajos + 1;
+                // copia comandoNuevo dentro del campo comando del struct del job, la parte del final intenta evitar overflow si comandoNuevo es grande
+                //sizeof(arrayTrabajos[numTrabajos].comando) nos da el tamaño maximo que puede tener el campo comando de la estructura trabajoBG
+                arrayTrabajos[numTrabajos].id = numTrabajos + 1; //como el numTrabajos empieza desde 0 el id para el nuevo es uno mas
                 numTrabajos++;
 
                 printf("[%d] %d\n", numTrabajos, hijos[numComandos - 1]);
