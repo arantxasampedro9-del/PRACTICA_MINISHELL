@@ -32,7 +32,7 @@ int main(void) {
     char dirTemporal[1024];
     char *home;
     char ruta[1024];
-    char comando_limpio[1024];
+    char comandoNuevo[1024];
     int tub[2]; 
     pid_t hijo1, hijo2; //como son dos mandatos necesitamos dos procesos hijo
     int numComandos;
@@ -107,7 +107,7 @@ int main(void) {
                     printf("%s\n", ruta);
                 }
             } else {
-                fprintf(stderr, "cd: No se encontro el directorio: %s %s\n", directorio, strerror(errno));
+                fprintf(stderr, "cd: No se encontro el directorio: %s \n", directorio);
             }
 
             printf("==> ");
@@ -119,41 +119,26 @@ int main(void) {
         //--------umask------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "umask"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
-            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask
-                miUmask = umask(0);
+            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask imprimimos el que este guardado, si nos ponen algo mas es porque quieren cambiarlo a una nueva mascara
+                miUmask = umask(0); 
                 umask(miUmask);
-                printf("0%03o\n", miUmask); //imprime por defecto 0022
-                //%o → imprimir en octal
-                //%03o → imprimir con 3 dígitos, completando con ceros si hace falta
+                printf("0%03o\n", miUmask); 
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
-
             argumento = line->commands[0].argv[1];
-            errno=0;
-            final = NULL;
-            // Convertir cadena → entero (en este caso es octal, 8)
+            //errno=0; //ponemos errno a 0 para ver si luego strtol da error
             nuevaMascara = strtol(argumento, NULL, 8);
-            //argumento → contiene algo como "0077"
-            //NULL, una variable donde strtol guardará la dirección del primer carácter que NO formó parte del número, no nos interesa asique null
-            //8 es pasar en base octal 
-            if (errno != 0 || final == argumento || *final != '\0' || nuevaMascara < 0 ) {
 
+            if (nuevaMascara < 0 ) {
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
-
-            // Guardamos en nuestra umask interna
-            miUmask = (mode_t) nuevaMascara;
-
-            // También la aplicamos a nivel de sistema
-            umask(miUmask);  
-            // de esta forma si el usuario escribe umask se podra mostrar porque ya la tenemos guardada
-            //A partir de esa línea: cuando tu minishell cree nuevos archivos o directorios, se aplicarán los permisos según esa nueva umask.
-            
+            miUmask = (mode_t) nuevaMascara; // Guardamos en nuestra umask interna
+            umask(miUmask); // Guardamos en nuestra umask interna  
             printf("==> ");
             fflush(stdout);
             continue;
@@ -189,176 +174,136 @@ int main(void) {
         //--------fg------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "fg"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "fg") == 0) {
-            // Si "fg" no tiene argumentos implica que es el último trabajo
-            if (line->commands[0].argc == 1) { //si el usuario escribe fg sin el id del proceso
-                if (numTrabajos == 0) { //entonces si no hay procesos volvemos
-                    fprintf(stderr, "fg: no hay trabajos\n");
+            if (line->commands[0].argc == 1) {  //// Si "fg" no tiene argumentos implica que traiga a foreground el último trabajo
+                if (numTrabajos == 0) { //si no hay trabajos no va a haber ultimo por tanto error
+                    fprintf(stderr, "fg: no hay ningun trabajo no puedo traer nada a foreground\n");
                     printf("==> ");
                     fflush(stdout);
                     continue;
                 }
-                id = numTrabajos - 1; //si si que hay traemos a foreground el ultimo proceso mandado a background
-                //Restamos 1 porque tu lista usa índices desde 0 (el usuario ve [1], [2], ...) 
-            } else { //el otro caso es que ponga fg con el id del proceso
-            // Caso "fg 2" por ejemplo
+                id = numTrabajos - 1; 
+            } else { //en el caso de que me indique que trabajo quiere que traiga a foreground
                 id = atoi(line->commands[0].argv[1]) - 1;
-                //el numero de proceso es el segundo argumento que pasa el usuario es decir  argv[1] si meto fg 2 seria el 2
-                //como 2 es el argv[1] e suna cadena lo pasamos a entero para que sea el id correcto
-                if (id < 0 || id >= numTrabajos) {// en estos casos no seria valido
-                    fprintf(stderr, "fg: identificador inválido\n");
+                if (id < 0 || id >= numTrabajos) { 
+                    fprintf(stderr, "fg: el identificador %d no es correcto\n", id);
                     printf("==> ");
                     fflush(stdout);
                     continue;
                 }
             }
-
-            printf("%s\n", arrayTrabajos[id].comando); //imprimimos el comando que queremos traer a fg que es el numero que tenga el id
-
-            // Esperar a que termine el proceso
-            waitpid(arrayTrabajos[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el proceos creado con ese id
-
+            printf("%s\n", arrayTrabajos[id].comando);
+            waitpid(arrayTrabajos[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el trabajo creado con ese id
             //cuando el proceso termina debemos eliminarlo de la lista
-            for (i = id; i < numTrabajos - 1; i++) {//recorremos todos los que se mantienen
-                arrayTrabajos[i] = arrayTrabajos[i+1]; //si borramos uno todos deben moverse hacia atras
+            for (i = id; i < numTrabajos - 1; i++) {
+                arrayTrabajos[i] = arrayTrabajos[i+1]; 
             }
-            numTrabajos--;//ahora hay uno menos, reducimos contador
-
+            numTrabajos--;
             printf("==> ");
             fflush(stdout);
             continue;
         }
 
+        //Ser capaz de reconocer y ejecutar tanto en foreground como en background líneas con 1 o más mandatos
+        //con sus argumentos, enlazados con ‘|’, con redirección de entrada estándar desde archivo y redirección de salida a archivo
         if (line->ncommands >= 1) {
-
-            numComandos=line->ncommands;  //es cuántos comandos separa el parser según los |, calcula cuantos comandos hay
-            // (type*)malloc(n_bytes), pero en C moderno no hace falta el tipo 
-            //malloc: reserva un vector de punteros, uno por tubería. tuberias[0] --> ? , tuberias[1] --> ? ...
-            //Cada posición del vector todavía NO tiene memoria para los dos extremos.
-            tuberias = malloc((numComandos - 1) * sizeof(int*)); //reserva de memoria para las tuberias (nº de tuberias que hay), si hay n comandos se necesitan n-1 tuberias
+            numComandos=line->ncommands;  
+            tuberias = malloc((numComandos - 1) * sizeof(int*)); //reserva de memoria para las tuberias
             if (tuberias == NULL) {
-                perror("malloc tuberias");
+                fprintf(stderr, "No se ha podido reservar memoria para las tuberias");
                 exit(1);
             }
-        
-            // aqui se reserva espacio para dos enteros que son los extremos de la tuberia
-            // se crea cada tuberia como un array de dos enteros
+            // se crea cada tuberia como un array de dos enteros para los extremos 
             // tuberias[i][0] --> extremos de lectura
             // tuberias[i][1] --> extremos de escritura
             for (i = 0; i < numComandos - 1; i++) {
                 tuberias[i] = malloc(2 * sizeof(int)); 
                     if (tuberias[i] == NULL) {
-                        perror("malloc tuberia individual");
+                        fprintf(stderr, "No se han podido crear los extremos de la tubería");
                         exit(1);
                     }
-            }   
-              
-            //// se reserva memoria para los hijos, se guarda el PID de cada proceso hijo para luego hacer waitpid  
+            }     
+            // se reserva memoria para los hijos
             hijos = malloc(numComandos * sizeof(pid_t));   
             if (hijos == NULL) {
-                perror("malloc hijos");
+                fprintf(stderr, "Error al reservar memoria para los hijos");
                 exit(1);
             }
-
-            // ===== Crear las tuberías necesarias, las reales =====
+            //Crear las tuberías necesarias 
             for (i = 0; i < numComandos - 1; i++) {
-                if (pipe(tuberias[i]) < 0) {  // aqui es donde el ordenador rellena los descriptores, hace internamiente: tuberias[i][0] = fd_lectura, tuberias[i][1] = fd_escritura
-                    perror("pipe");
+                if (pipe(tuberias[i]) < 0) {  
+                    fprintf(stderr, "Error al crear la tuberia");
                      exit(1);
                 }
             }
-
-            // ===== Crear procesos hijos =====
-            for (i = 0; i< numComandos; i++) { // si tengo A | B | C | D son 4 coandos, entonces 4 hijos uno por cada comando
+            //------hijos------
+            for (i = 0; i< numComandos; i++) { // se crea un hijo por comando
                 hijos[i] = fork();
                 if (hijos[i] < 0) {
                     perror("fork");
                     exit(1);
                 }else if (hijos[i] == 0) {
                     //  HIJO i
-                    //cada hijo debe: 
-                    //leer de la tubería anterior (menos el primero)
-                    //escribir en la tubería siguiente (menos el último)
-                    //hacer sus redirecciones
+                    //cada hijo: 
+                    //lee de la tubería anterior (menos el primero)
+                    //escribe en la tubería siguiente (menos el último)
+                    //hacer las redirecciones pertinentes 
                     //ejecutar su comando con execvp
 
-                    if (!line->background){
+                    if (!line->background){ //si no esta en background, con la señal ctrl+c vuelve a imprimir => en lugar de salirse
                         signal(SIGINT, SIG_DFL);
                     } 
                     
-                    redireccion_entrada(line, i, &descriptorEntrada);
-                    redireccion_salida(line, i, numComandos, &descriptorSalida);
-
-                    // ----- 2. Conectar pipes según la posición -----
-
-                    // Si NO es el primer comando → su stdin viene del pipe anterior
-                    //si es cmd1 lee de tuberias[0][0], si es cmd2 lee de tuberias[1][0] y asi
-                    //el segundo valor indica lectura el primero el numero de tuberia
+                    redireccionEntrada(line, i, &descriptorEntrada);
+                    redireccionSalida(line, i, numComandos, &descriptorSalida);
                     if (i > 0) {
-                        dup2(tuberias[i-1][0], STDIN_FILENO); //lee de la tuberia 
+                        dup2(tuberias[i-1][0], STDIN_FILENO); 
                     }
-
-                    // Si NO es el último comando → su stdout va al pipe siguiente
-                    //si es cmd 0 escribe en tuberias[0][1], si es cmd 1 escribe en tuberias[1][1]
                     if (i < numComandos - 1) {
                         dup2(tuberias[i][1], STDOUT_FILENO);
                     }
-
-                    // ----- 3. Cerrar TODAS las tuberías -----
+                    //Cerrar TODAS las tuberías del hijo que se esta ejecutando
                     for (j = 0; j < numComandos - 1; j++) {
                         close(tuberias[j][0]);
                         close(tuberias[j][1]);
                     }
-
-                    // ----- 4. Exec -----
-                    //ejcuta el comando real
                     execvp(line->commands[i].filename, line->commands[i].argv);
-                    perror("execvp hijo");
+                    fprintf(stderr, "No se ha podido ejecutar el comando");
                     exit(1);
                 }
             }
 
-            // ----- PADRE -------
+            // -------padre-------
             //cierra tuberias
             for (i = 0; i < numComandos - 1; i++) {
                 close(tuberias[i][0]);
                 close(tuberias[i][1]);
             }
-
+            //foreground
             if (!line->background) {
-                // -------- FOREGROUND --------
                 for (i = 0; i < numComandos; i++) {
                     waitpid(hijos[i], NULL, 0);
                 }
-            } else {
-            // -------- BACKGROUND --------
-            //el pipeline es una cadena de comandos conectado con |, donde la salida de un comando pasa a ser la entrada del siguiente
+            } else { //background
                 arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG));
                 if (arrayTrabajos == NULL) {
-                    perror("realloc");
+                    fprintf(stderr, "Error de reasignacion de memoria");
                     exit(1);
                 }
-
-                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; //guardamos el pid del proceso en background
-                //el proceso que representa el pipeline es el ultimo hijo, asi que guardas su PID para poder listarlo con jobs, traerlo con fg y controlarlo
-                
-                strcpy(comando_limpio, "");
+                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; 
+                strcpy(comandoNuevo, "");
                 n = 0;
-
                 ultimo = line->ncommands - 1;
 
                 while (line->commands[ultimo].argv[n] != NULL) {
-                    strcat(comando_limpio, line->commands[ultimo].argv[n]);
-                    strcat(comando_limpio, " ");
+                    strcat(comandoNuevo, line->commands[ultimo].argv[n]);
+                    strcat(comandoNuevo, " ");
                     n++;
                 }
-
-
-                strncpy(arrayTrabajos[numTrabajos].comando, comando_limpio, sizeof(arrayTrabajos[numTrabajos].comando));
+                strncpy(arrayTrabajos[numTrabajos].comando, comandoNuevo, sizeof(arrayTrabajos[numTrabajos].comando));
                 arrayTrabajos[numTrabajos].comando[sizeof(arrayTrabajos[numTrabajos].comando)-1] = '\0';
-                arrayTrabajos[numTrabajos].id = numTrabajos + 1; //le asignamos un numero de job para poder
-                numTrabajos++; //actualizamos los jobs que hay en background
- 
-                // Mensaje estilo bash
+                arrayTrabajos[numTrabajos].id = numTrabajos + 1;
+                numTrabajos++;
+
                 printf("[%d] %d\n", numTrabajos, hijos[numComandos - 1]);
             }
 
@@ -383,12 +328,11 @@ int main(void) {
     }
 
 void redireccionEntrada(tline *line, int i, int *descriptorEntrada) {
-    // Entrada estándar (SOLO PRIMER MANDATO)
     if (i == 0 && line->redirect_input != NULL) {
 
         *descriptorEntrada = open(line->redirect_input, O_RDONLY);
         if (*descriptorEntrada < 0) { 
-            perror("open redirect_input"); 
+            fprintf(stderr, "Error al abrir el arhcivo de entrada"); 
             exit(1);
         }
 
@@ -398,12 +342,11 @@ void redireccionEntrada(tline *line, int i, int *descriptorEntrada) {
 }
 
 void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida) {
-    // Salida estándar (SOLO ULTIMO MANDATO)
     if (i == numComandos - 1 && line->redirect_output != NULL) {
 
         *descriptorSalida = open(line->redirect_output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
         if (*descriptorSalida < 0) { 
-            perror("open redirect_output"); 
+            fprintf(stderr, "Error al escribir en el archivo de salida"); 
             exit(1); 
         }
 
