@@ -119,8 +119,8 @@ int main(void) {
         //--------umask------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "umask"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
-            if (line->commands[0].argc == 1) { //este caso es en el que el usuario solo escribe umask sin ningun argumento, imprimimos el ultimo guardado. 
-                miUmask = umask(0); // lee la actual peor lo pone a 0 temporalmente porque si no la imprimir umask sale un numero super largo y mal
+            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask imprimimos el que este guardado, si nos ponen algo mas es porque quieren cambiarlo a una nueva mascara
+                miUmask = umask(0); 
                 umask(miUmask);
                 printf("0%03o\n", miUmask); 
                 printf("==> ");
@@ -129,20 +129,14 @@ int main(void) {
             }
             argumento = line->commands[0].argv[1];
             //errno=0; //ponemos errno a 0 para ver si luego strtol da error
-            //nuevaMascara = strtol(argumento, NULL, 8);  si hicieramos esto, con NULL no se sabe si la conversion fue valida por eso normalmento se usa char *end y errno, por ejemplo umask hola, devuelve 0 y se aceptaria
-            errno = 0; //errno es una funcion que se usa para detectar errores la usan funciones como strtol open read
-            final = NULL; 
-            nuevaMascara = strtol(argumento, &final, 8);
+            nuevaMascara = strtol(argumento, NULL, 8);
 
-            //la validacion del if: errno != 0: overflow u otros errores, final == argumento: no convirtio nada porque ha habido un error no ha avanzado "umask hola", el rango permitido
-
-            if ( errno != 0 || final == argumento || *final != '\0'||nuevaMascara < 0 || nuevaMascara > 0777) {  
+            if (nuevaMascara < 0 ) {  //errno != 0 || end == argumento || *end != '\0' || v < 0 || v > 0777
                 fprintf(stderr, "umask: valor invalido\n");
                 printf("==> ");
                 fflush(stdout);
                 continue;
             }
-            
             miUmask = (mode_t) nuevaMascara; // Guardamos en nuestra umask interna
             umask(miUmask); // Guardamos en nuestra umask interna  
             printf("==> ");
@@ -290,24 +284,33 @@ int main(void) {
                     waitpid(hijos[i], NULL, 0);
                 }
             } else { //background
-                arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG));
+                arrayTrabajos = realloc(arrayTrabajos, (numTrabajos + 1) * sizeof(trabajoBG)); 
+                //como puede haber ya huecos del array creados de otros comandos en backround es necesario que en cada iteracion de uno de ellos redimensionemos la memoria porque con malloc podria noc caber
+                //esto es ara genera un nuevo trabajo en el array de trabajos y debe ser manteniendo el numero
+                //de elementos que habia antes + 1 es decir: numTrabajos +1 del stipo TrabajosBG que es nuestra estructura
+
                 if (arrayTrabajos == NULL) {
                     fprintf(stderr, "Error de reasignacion de memoria");
                     exit(1);
                 }
-                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; 
-                strcpy(comandoNuevo, "");
-                n = 0;
-                ultimo = line->ncommands - 1;
 
-                while (line->commands[ultimo].argv[n] != NULL) {
-                    strcat(comandoNuevo, line->commands[ultimo].argv[n]);
+                arrayTrabajos[numTrabajos].pid = hijos[numComandos - 1]; 
+                
+                strcpy(comandoNuevo, ""); //creamos una cadena vacia
+                n = 0; //indice para recorrer todas las palabras del comando ls  -l es argv[0] -l es argv[1] por ejemplo
+                ultimo = line->ncommands - 1; // calcula el índice del último comando en la línea EL QUE NOS INTERESA
+
+                while (line->commands[ultimo].argv[n] != NULL) { //siempre querremos guardra el ultimo comando porque es el que va a background
+                    strcat(comandoNuevo, line->commands[ultimo].argv[n]); //recorremos todos los caracteres del ultimo argumento para poder guardarlo en una cadena de forma limpi hasta llegar al final de el
+                    // si argv = {"ls", "-l", "/tmp", NULL} → comandoNuevo se convierte en "ls -l /tmp "
                     strcat(comandoNuevo, " ");
                     n++;
                 }
+
                 strncpy(arrayTrabajos[numTrabajos].comando, comandoNuevo, sizeof(arrayTrabajos[numTrabajos].comando));
-                arrayTrabajos[numTrabajos].comando[sizeof(arrayTrabajos[numTrabajos].comando)-1] = '\0';
-                arrayTrabajos[numTrabajos].id = numTrabajos + 1;
+                // copia comandoNuevo dentro del campo comando del struct del job, la parte del final intenta evitar overflow si comandoNuevo es grande
+                //sizeof(arrayTrabajos[numTrabajos].comando) nos da el tamaño maximo que puede tener el campo comando de la estructura trabajoBG
+                arrayTrabajos[numTrabajos].id = numTrabajos + 1; //como el numTrabajos empieza desde 0 el id para el nuevo es uno mas
                 numTrabajos++;
 
                 printf("[%d] %d\n", numTrabajos, hijos[numComandos - 1]);
