@@ -258,7 +258,7 @@ int main(void) {
             for (i = 0; i< numComandos; i++) { // se crea un hijo por comando
                 hijos[i] = fork();
                 if (hijos[i] < 0) {
-                    perror("fork");
+                    fprintf(stderr, "Error al crear el proceso hijo");
                     exit(1);
                 }else if (hijos[i] == 0) {
                     //  HIJO i
