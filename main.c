@@ -20,6 +20,24 @@ typedef struct {
 
 void redireccionEntrada(tline *line, int i, int *descriptorEntrada);
 void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida);
+void ejecutar_cd(tline *line);
+void ejecutar_umask(tline *line);
+
+trabajoBG *arrayTrabajos = NULL;
+int numTrabajos = 0;
+
+//cd
+char ruta[1024];
+char dirTemporal[1024];
+char *directorio;
+char *home;
+
+
+//umask
+char *argumento;
+char *final;
+mode_t miUmask; 
+long nuevaMascara;
 
 int main(void) {
     tline * line;
@@ -34,17 +52,12 @@ int main(void) {
     int ultimo;
     pid_t pid1; 
 
-    //cd
-    char *directorio;
-    char dirTemporal[1024];
-    char *home;
-    char ruta[1024];
 
     //umask
-    char *argumento;
-    char *final;
-    mode_t miUmask; 
-    long nuevaMascara;
+    //char *argumento;
+    //char *final;
+    //mode_t miUmask; 
+    //long nuevaMascara;
 
      //jobs
     pid_t estadoProceso;
@@ -53,8 +66,8 @@ int main(void) {
     int id; 
 
     //jobs y fg
-    trabajoBG *arrayTrabajos=NULL; 
-    int numTrabajos = 0; //son los trabajos del background
+    //trabajoBG *arrayTrabajos=NULL; 
+    //int numTrabajos = 0; //son los trabajos del background
 
     //para la parte de control de comandos
     int numComandos;
@@ -100,34 +113,7 @@ int main(void) {
         // ----------cd----------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "cd"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "cd") == 0) {
-            // Si no hay argumentos va a HOME
-            if (line->commands[0].argc == 1) {
-                directorio = getenv("HOME"); 
-                if (directorio == NULL) { 
-                    fprintf(stderr, "$HOME no existe\n");
-                    continue; 
-                }
-            } else {
-                // si hay argumento el directorio tendra que tomar el valor de ese argumento
-                directorio = line->commands[0].argv[1]; 
-                //comprueba si el primer caracter del argumento es ~ para asi convertirlo  de ~/Documentos a /home/usuario/Documentos
-                if (directorio[0] == '~') { 
-                    home = getenv("HOME"); 
-                    //construye ruta completa
-                    strcpy(dirTemporal, home);
-                    strcat(dirTemporal, directorio + 1);
-                    directorio = dirTemporal; 
-                }
-            }
-            //si la carpeta existe en nuestro ordenador entra en el if y ya estamos dentro del directorio
-            if (chdir(directorio) == 0) {
-                if (getcwd(ruta, sizeof(ruta)) != NULL) { 
-                    printf("%s\n", ruta);
-                }
-            } else {
-                fprintf(stderr, "cd: No se encontro el directorio: %s \n", directorio);
-            }
-
+            ejecutar_cd(line);
             printf("==> ");
             fflush(stdout);
             continue;
@@ -137,27 +123,7 @@ int main(void) {
         //--------umask------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "umask"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "umask") == 0) {
-            if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask imprimimos el que este guardado, si nos ponen algo mas es porque quieren cambiarlo a una nueva mascara
-                miUmask = umask(0); 
-                umask(miUmask);
-                printf("0%03o\n", miUmask); 
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-            errno = 0;
-            final = NULL; 
-            nuevaMascara = strtol(argumento, &final, 8);
-
-            if (errno != 0 || final == argumento || *final != '\0' || nuevaMascara < 0 || nuevaMascara > 0777) {
-                fprintf(stderr, "umask: valor invalido\n");
-                printf("==> ");
-                fflush(stdout);
-                continue;
-            }
-
-            miUmask = (mode_t) nuevaMascara; 
-            umask(miUmask); // Guardamos en nuestra umask interna  
+            ejecutar_umask(line);
             printf("==> ");
             fflush(stdout);
             continue;
@@ -375,4 +341,57 @@ void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalid
         dup2(*descriptorSalida, STDOUT_FILENO);
         close(*descriptorSalida);
     }
+}
+
+void ejecutar_cd(tline *line) {
+ // Si no hay argumentos va a HOME
+    if (line->commands[0].argc == 1) {
+        directorio = getenv("HOME"); 
+            if (directorio == NULL) { 
+                fprintf(stderr, "$HOME no existe\n");
+                return; 
+            }
+    } else {
+        // si hay argumento el directorio tendra que tomar el valor de ese argumento
+        directorio = line->commands[0].argv[1]; 
+        //comprueba si el primer caracter del argumento es ~ para asi convertirlo  de ~/Documentos a /home/usuario/Documentos
+        if (directorio[0] == '~') { 
+            home = getenv("HOME"); 
+            //construye ruta completa
+            strcpy(dirTemporal, home);
+            strcat(dirTemporal, directorio + 1);
+            directorio = dirTemporal; 
+            }
+    }
+    //si la carpeta existe en nuestro ordenador entra en el if y ya estamos dentro del directorio
+    if (chdir(directorio) == 0) {
+        if (getcwd(ruta, sizeof(ruta)) != NULL) { 
+            printf("%s\n", ruta);
+        }
+    } else {
+        fprintf(stderr, "cd: No se encontro el directorio: %s \n", directorio);
+    }
+            
+}
+
+void ejecutar_umask(tline *line){
+    if (line->commands[0].argc == 1) {//si el usuario escribe simplemente umask imprimimos el que este guardado, si nos ponen algo mas es porque quieren cambiarlo a una nueva mascara
+        miUmask = umask(0); 
+        umask(miUmask);
+        printf("0%03o\n", miUmask); 
+        return;
+    }
+    errno = 0;
+    final = NULL; 
+    argumento = line->commands[0].argv[1];
+    nuevaMascara = strtol(argumento, &final, 8);
+
+    if (errno != 0 || final == argumento || *final != '\0' || nuevaMascara < 0 || nuevaMascara > 0777) {
+        fprintf(stderr, "umask: valor invalido\n");
+        return;
+    }
+
+    miUmask = (mode_t) nuevaMascara; 
+    umask(miUmask); // Guardamos en nuestra umask interna 
+         
 }
