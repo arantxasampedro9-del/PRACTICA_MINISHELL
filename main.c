@@ -386,7 +386,7 @@ void ejecutar_umask(tline *line){
     argumento = line->commands[0].argv[1];
     nuevaMascara = strtol(argumento, &final, 8);
 
-    if (errno != 0 || final == argumento || nuevaMascara < 0 || nuevaMascara > 7777) {
+    if (errno != 0 || final == argumento || *final != '\0'|| nuevaMascara < 0 || nuevaMascara > 7777) {
         fprintf(stderr, "umask: valor invalido\n");
         return;
     }
