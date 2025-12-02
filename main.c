@@ -27,9 +27,6 @@ void ejecutar_exit();
 void ejecutar_jobs();
 void ejecutar_fg(tline *line);
 
-trabajoBG *arrayTrabajos = NULL;
-int numTrabajos = 0;
-
 //cd
 char ruta[MAX];
 char dirTemporal[MAX];
@@ -41,6 +38,10 @@ char *argumento;
 char *final;
 mode_t miUmask; 
 long nuevaMascara;
+
+//jobs y fg
+trabajoBG *arrayTrabajos = NULL;
+int numTrabajos = 0;
 
 //jobs
 pid_t estadoProceso;
