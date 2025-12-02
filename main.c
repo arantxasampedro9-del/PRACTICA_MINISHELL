@@ -10,11 +10,12 @@
 #include <unistd.h>
 #include <sys/stat.h> // para umask
 #include <errno.h>
+#define MAX 1024
 
 //para el jobs 
 typedef struct {
     pid_t pid;
-    char comando[1024];
+    char comando[MAX];
     int id;
 } trabajoBG;
 
@@ -22,13 +23,16 @@ void redireccionEntrada(tline *line, int i, int *descriptorEntrada);
 void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida);
 void ejecutar_cd(tline *line);
 void ejecutar_umask(tline *line);
+void ejecutar_exit();
+void ejecutar_jobs();
+void ejecutar_fg(tline *line);
 
 trabajoBG *arrayTrabajos = NULL;
 int numTrabajos = 0;
 
 //cd
-char ruta[1024];
-char dirTemporal[1024];
+char ruta[MAX];
+char dirTemporal[MAX];
 char *directorio;
 char *home;
 
@@ -39,20 +43,21 @@ char *final;
 mode_t miUmask; 
 long nuevaMascara;
 
+//jobs
+pid_t estadoProceso;
+
 int main(void) {
     tline * line;
 
     int descriptorEntrada;
     int descriptorSalida;
 
-    int i, j, n;
-
-    char buf[1024];
+    char buf[MAX];
 
     int ultimo;
     pid_t pid1; 
 
-
+    int i, j, n;
     //umask
     //char *argumento;
     //char *final;
@@ -60,7 +65,7 @@ int main(void) {
     //long nuevaMascara;
 
      //jobs
-    pid_t estadoProceso;
+    //pid_t estadoProceso;
 
     //fg
     int id; 
@@ -71,7 +76,7 @@ int main(void) {
 
     //para la parte de control de comandos
     int numComandos;
-    char comandoNuevo[1024];
+    char comandoNuevo[MAX];
     int tub[2]; 
     pid_t hijo1, hijo2; //como son dos comandos necesitamos dos procesos hijo
     int **tuberias;
@@ -80,7 +85,7 @@ int main(void) {
     signal(SIGINT, SIG_IGN);
 
     printf("==> "); 
-    while (fgets(buf, 1024, stdin)) {
+    while (fgets(buf, MAX, stdin)) {
         line = tokenize(buf);
         if (line == NULL)
             continue;
@@ -105,9 +110,7 @@ int main(void) {
         //-----exit------       
         //comprueba que solo se haya pasado un mandato y que el mandtao pasado sea "exit"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "exit") == 0) {
-            printf("Saliendo de la shell ...\n");
-            exit(0);
-            
+            ejecutar_exit();
         }
     
         // ----------cd----------
@@ -132,28 +135,10 @@ int main(void) {
         //--------jobs------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "jobs"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "jobs") == 0) {
-            // Primero: limpiar los procesos que ya hayan terminado
-            i = 0;
-            while (i < numTrabajos) { //recorremos los procesos que hay en backgrouund
-                estadoProceso = waitpid(arrayTrabajos[i].pid, NULL, WNOHANG); //creamos un proceso para analizar como esta cada proceso/hijo
-                //si el estadoProceso toma el valor -1 o el del pid debemos borrarlo de la lista
-                if (estadoProceso == arrayTrabajos[i].pid || estadoProceso == -1) {
-                    for (j = i; j < numTrabajos - 1; j++) {
-                        arrayTrabajos[j] = arrayTrabajos[j + 1];
-                    }
-                    numTrabajos--;
-                    continue; 
-                }
-                i++;
-            }
-
-            for (i = 0; i < numTrabajos; i++) { //recorre el numero de procesos que estan guardados en la estructura
-                printf("[%d]+  Running  %s &\n", i+1, arrayTrabajos[i].comando);
-            }
-
-                printf("==> ");
-                fflush(stdout);
-                continue;
+            ejecutar_jobs();
+            printf("==> ");
+            fflush(stdout);
+            continue;
         }
 
         //--------fg------
@@ -394,4 +379,32 @@ void ejecutar_umask(tline *line){
     miUmask = (mode_t) nuevaMascara; 
     umask(miUmask); // Guardamos en nuestra umask interna 
          
+}
+
+void ejecutar_exit() {
+    printf("Saliendo de la shell ...\n");
+    free(arrayTrabajos);
+    exit(0);
+}
+
+void ejecutar_jobs(){
+    int i, j;
+    i = 0;
+    while (i < numTrabajos) { //recorremos los procesos que hay en backgrouund
+        estadoProceso = waitpid(arrayTrabajos[i].pid, NULL, WNOHANG); //creamos un proceso para analizar como esta cada proceso/hijo
+        //si el estadoProceso toma el valor -1 o el del pid debemos borrarlo de la lista
+        if (estadoProceso == arrayTrabajos[i].pid || estadoProceso == -1) {
+            for (j = i; j < numTrabajos - 1; j++) {
+                arrayTrabajos[j] = arrayTrabajos[j + 1];
+            }
+            numTrabajos--;
+            continue; 
+            }
+            i++;
+        }
+
+    for (i = 0; i < numTrabajos; i++) { //recorre el numero de procesos que estan guardados en la estructura
+        printf("[%d]+  Running  %s &\n", i+1, arrayTrabajos[i].comando);
+    }
+
 }
