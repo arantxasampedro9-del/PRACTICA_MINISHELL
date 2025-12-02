@@ -36,7 +36,6 @@ char dirTemporal[MAX];
 char *directorio;
 char *home;
 
-
 //umask
 char *argumento;
 char *final;
@@ -45,6 +44,9 @@ long nuevaMascara;
 
 //jobs
 pid_t estadoProceso;
+
+//fg
+int id;
 
 int main(void) {
     tline * line;
@@ -58,21 +60,6 @@ int main(void) {
     pid_t pid1; 
 
     int i, j, n;
-    //umask
-    //char *argumento;
-    //char *final;
-    //mode_t miUmask; 
-    //long nuevaMascara;
-
-     //jobs
-    //pid_t estadoProceso;
-
-    //fg
-    int id; 
-
-    //jobs y fg
-    //trabajoBG *arrayTrabajos=NULL; 
-    //int numTrabajos = 0; //son los trabajos del background
 
     //para la parte de control de comandos
     int numComandos;
@@ -407,4 +394,28 @@ void ejecutar_jobs(){
         printf("[%d]+  Running  %s &\n", i+1, arrayTrabajos[i].comando);
     }
 
+}
+
+void ejecutar_fg(tline *line) {
+    int i;
+    if (line->commands[0].argc == 1) {  //// Si "fg" no tiene argumentos implica que traiga a foreground el último trabajo
+        if (numTrabajos == 0) { //si no hay trabajos no va a haber ultimo por tanto error
+            fprintf(stderr, "fg: no hay ningun trabajo no puedo traer nada a foreground\n");
+                return;
+        }
+        id = numTrabajos - 1; 
+    } else { //en el caso de que me indique que trabajo quiere que traiga a foreground
+        id = atoi(line->commands[0].argv[1]) - 1;
+        if (id < 0 || id >= numTrabajos) { 
+            fprintf(stderr, "fg: el identificador %d no es correcto\n", id);
+            return;
+        }
+    }
+    printf("%s\n", arrayTrabajos[id].comando);
+    waitpid(arrayTrabajos[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el trabajo creado con ese id
+    //cuando el proceso termina debemos eliminarlo de la lista
+    for (i = id; i < numTrabajos - 1; i++) {
+        arrayTrabajos[i] = arrayTrabajos[i+1]; 
+    }
+    numTrabajos--;
 }
