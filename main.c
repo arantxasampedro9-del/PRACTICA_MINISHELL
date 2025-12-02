@@ -131,30 +131,7 @@ int main(void) {
         //--------fg------
         //comprueba que solo se haya pasado un mandato y que el mandato pasado sea "fg"
         if (line->ncommands == 1 && strcmp(line->commands[0].argv[0], "fg") == 0) {
-            if (line->commands[0].argc == 1) {  //// Si "fg" no tiene argumentos implica que traiga a foreground el último trabajo
-                if (numTrabajos == 0) { //si no hay trabajos no va a haber ultimo por tanto error
-                    fprintf(stderr, "fg: no hay ningun trabajo no puedo traer nada a foreground\n");
-                    printf("==> ");
-                    fflush(stdout);
-                    continue;
-                }
-                id = numTrabajos - 1; 
-            } else { //en el caso de que me indique que trabajo quiere que traiga a foreground
-                id = atoi(line->commands[0].argv[1]) - 1;
-                if (id < 0 || id >= numTrabajos) { 
-                    fprintf(stderr, "fg: el identificador %d no es correcto\n", id);
-                    printf("==> ");
-                    fflush(stdout);
-                    continue;
-                }
-            }
-            printf("%s\n", arrayTrabajos[id].comando);
-            waitpid(arrayTrabajos[id].pid, NULL, 0); //la shell se bloquea y espera a que termine el trabajo creado con ese id
-            //cuando el proceso termina debemos eliminarlo de la lista
-            for (i = id; i < numTrabajos - 1; i++) {
-                arrayTrabajos[i] = arrayTrabajos[i+1]; 
-            }
-            numTrabajos--;
+           ejecutar_fg(line);
             printf("==> ");
             fflush(stdout);
             continue;
