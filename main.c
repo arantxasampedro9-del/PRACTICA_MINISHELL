@@ -14,12 +14,12 @@ typedef struct { //lo que comparten las fabricas y los habitantes
 } DatosCompartidos;
 
 typedef struct {
-    int idFabrica;
-    int vacunasTotales;
-    int minTanda, maxTanda;
-    int minTiempoFab, maxTiempoFab;
-    int maxTiempoReparto;
-    DatosCompartidos *datos;
+    int idFabrica; //numero de fabrica 
+    int vacunasTotales; //vacuna que debe fabricar en total HAY QUE INICIALIZARLO?
+    int minTanda, maxTanda; //rango de vacunas que produce en cada tanda
+    int minTiempoFab, maxTiempoFab; //tiempo aleatorio de fabricacion por tanda
+    int maxTiempoReparto; //tiempo aleatorio del reparto
+    DatosCompartidos *datos; //puntero para poder tocar stock[], esperando []
 } Fabrica;
 
 void* hiloFabrica(void *arg) {
