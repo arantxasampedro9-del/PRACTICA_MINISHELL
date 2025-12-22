@@ -16,6 +16,7 @@ typedef struct {
     pthread_mutex_t mutex;     
     pthread_cond_t hayVacunas[CENTROS];
 } DatosCompartidos;
+
 typedef struct {
     int id;
     int vacunasTotales;
