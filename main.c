@@ -11,6 +11,7 @@ typedef struct { //lo que comparten las fabricas y los habitantes
     int esperando[CENTROS];    // Personas esperando en cada centro
     pthread_mutex_t mutex;     //candado para que no se pisen varios thread al leer/escribir stock y esperando
     pthread_cond_t hayVacunas[CENTROS]; //señal para despertar a personas qeu estan esperando vacunas en el centro i 
+    FILE *fSalida;
 } DatosCompartidos;
 
 typedef struct {
@@ -25,10 +26,10 @@ typedef struct {
 } Fabrica;
 
 typedef struct {
-    int id;
+    int idHiloHabitante;
     int maxTiempoReaccion;
     int maxTiempoDesplazamiento;
-    DatosCompartidos *datos;
+    DatosCompartidos *datos; //puntero para poder modificar mutex, vacunas...etc
 } Habitante;
 
 void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
@@ -93,52 +94,58 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 }
 
 void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta funcion
-    Habitante *h = (Habitante*) arg; //identificacion de cada hulo/habitante
+    Habitante *habitante = (Habitante*) arg; //identificacion de cada hulo/habitante
     //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
 
     //“Tiempo máximo que tarda un habitante hasta que se da cuenta que le han citado para vacunarse. 
     //El mínimo es 1, lo que hace es generar un numero aleatorio entre 1 y maxTiempoReaccion
-    sleep((unsigned int)(rand() % h->maxTiempoReaccion + 1));
+    sleep((rand() % habitante->maxTiempoReaccion + 1));
 
     // Selecciona un centro según su propio interés (podría hacerlo aleatoriamente).
     int centro = rand() % CENTROS; //de entre todos los centros disponibles selecciona uno aleatoriamente
-    printf("Habitante %d elige el centro %d para vacunarse\n", h->id, centro + 1);
-
+    printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
     //Tiempo máximo de desplazamiento del habitante al centro de vacunación
     //El mínimo es 1 lo que hace es generar un numero aleatorio entre 1 y maxTiempoDesplazamiento
-    sleep((unsigned int)(rand() % h->maxTiempoDesplazamiento + 1));
+    sleep((rand() % habitante->maxTiempoDesplazamiento + 1));
 
     //EMPIEZA EL INTENTO DE VACUNARSE - ZONA CRITICA
     //dos personas no pueden vacunarse a la vez en el mismo centro, solo un hilo puede tener el mutex a la vez
-    pthread_mutex_lock(&h->datos->mutex); 
+    pthread_mutex_lock(&habitante->datos->mutex); 
     //la estructura habitante tiene un dato de tipo de la estructura DatosCompartidos al acceder a datos accedemos  a la estrucura con mutex, esperando...etc
 
     //como ya he bloqueadoel mutex significa que el habitante esta disponible para ser vacunado por lo que aumento en 1 el numero de habitantes esperando en ese centro
     //es como ponerse a la cola para vacunarse
-    h->datos->esperando[centro]++;
+    habitante->datos->esperando[centro]++;
 
-    while (h->datos->vacunaDisponibles[centro] == 0) { //mientras en ese centro no haya vacunas para suministrar se espera el habitante
-        pthread_cond_wait(&h->datos->hayVacunas[centro], &h->datos->mutex); 
+    while (habitante->datos->vacunaDisponibles[centro] == 0) { //mientras en ese centro no haya vacunas para suministrar se espera el habitante
+        pthread_cond_wait(&habitante->datos->hayVacunas[centro], &habitante->datos->mutex); 
         //con esto el hilo se duerme hasta recibir una señal de que haya una vacuna y proceder a la vacunacion recuperando el mutex
     }
 
     //como hemos salido del while significa que  hay al menos una vacuna disponible y por tanto el paciente ha sido vacunado, SE HA GASTADO UNA VACUNA EN ESE CENTRO
     //tambien debemos quitarle de la cola de espera de ese centro porque ya ha sido vacunado
-    h->datos->vacunaDisponibles[centro]--;
-    h->datos->esperando[centro]--;
+    habitante->datos->vacunaDisponibles[centro]--;
+    habitante->datos->esperando[centro]--;
 
-    printf("Habitante %d vacunado en el centro %d\n", h->id, centro + 1);
+    printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
     //notificamos que hilo concreto ha sido vacunado y en que centro, ponemos centro + 1 porque empieza en 0
 
-    pthread_mutex_unlock(&h->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica = vacunarse
+    pthread_mutex_unlock(&habitante->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica = vacunarse
 
     pthread_exit(NULL);
-    return NULL;
 }
 
 
 int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
+    char *nombreSalida = "salida_vacunacion.txt";
+    if (argc >= 3) nombreSalida = argv[2];
+
+    FILE *fSalida = fopen(nombreSalida, "w");
+    if (!fSalida) {
+        perror("Error abriendo fichero de salida");
+        return 1;
+    }
 
     // 1) Leer fichero de entrada
     const char *nombreFichero = "entrada_vacunacion.txt";
@@ -223,6 +230,7 @@ int main(int argc, char *argv[]) {
 
     // 3) Inicializar datos compartidos
     DatosCompartidos datos;
+    datos.fSalida = fSalida;
 
     pthread_mutex_init(&datos.mutex, NULL);
     for (int i = 0; i < CENTROS; i++) {
@@ -276,7 +284,7 @@ int main(int argc, char *argv[]) {
         }
 
         for (int i = 0; i < tamTanda; i++) {
-            hab[i].id = idHabitante++;
+            hab[i].idHiloHabitante = idHabitante++;
             hab[i].maxTiempoReaccion = maxTiempoReaccion;
             hab[i].maxTiempoDesplazamiento = maxTiempoDesplaz;
             hab[i].datos = &datos;
@@ -313,5 +321,6 @@ int main(int argc, char *argv[]) {
     }
     pthread_mutex_destroy(&datos.mutex);
 
+    fclose(datos.fSalida);
     return 0;
 }
