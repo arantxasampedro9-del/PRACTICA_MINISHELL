@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
 
     // 1) Leer fichero de entrada
-    const char *nombreFichero = "entrada.txt";
+    const char *nombreFichero = "entrada_vacunacion.txt";
     if (argc >= 2) nombreFichero = argv[1];
 
     FILE *f = fopen(nombreFichero, "r");
@@ -267,5 +267,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
-
