@@ -1,3 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <time.h>
+#include <stdarg.h>
+#include <string.h>
+#include <errno.h>
+
 #define CENTROS 5
 
 typedef struct {
