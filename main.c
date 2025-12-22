@@ -11,6 +11,7 @@ typedef struct { //lo que comparten las fabricas y los habitantes
     int esperando[CENTROS];    // Personas esperando en cada centro
     pthread_mutex_t mutex;     //candado para que no se pisen varios thread al leer/escribir stock y esperando
     pthread_cond_t hayVacunas[CENTROS]; //señal para despertar a personas qeu estan esperando vacunas en el centro i 
+    FILE *fSalida;
 } DatosCompartidos;
 
 typedef struct {
@@ -130,6 +131,14 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
 
 int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
+    char *nombreSalida = "salida_vacunacion.txt";
+    if (argc >= 3) nombreSalida = argv[2];
+
+    FILE *fSalida = fopen(nombreSalida, "w");
+    if (!fSalida) {
+        perror("Error abriendo fichero de salida");
+        return 1;
+    }
 
     // 1) Leer fichero de entrada
     const char *nombreFichero = "entrada_vacunacion.txt";
@@ -185,6 +194,7 @@ int main(int argc, char *argv[]) {
 
     // 3) Inicializar datos compartidos
     DatosCompartidos datos;
+    datos.fSalida = fSalida;
 
     pthread_mutex_init(&datos.mutex, NULL);
     for (int i = 0; i < CENTROS; i++) {
@@ -275,5 +285,6 @@ int main(int argc, char *argv[]) {
     }
     pthread_mutex_destroy(&datos.mutex);
 
+    fclose(datos.fSalida);
     return 0;
 }
