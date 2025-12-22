@@ -16,8 +16,10 @@ typedef struct { //lo que comparten las fabricas y los habitantes
 typedef struct {
     int idFabrica; //numero de fabrica 
     int vacunasTotales; //vacuna que debe fabricar en total HAY QUE INICIALIZARLO?
-    int minTanda, maxTanda; //rango de vacunas que produce en cada tanda
-    int minTiempoFab, maxTiempoFab; //tiempo aleatorio de fabricacion por tanda
+    int minTanda; 
+    int maxTanda; //rango de vacunas que produce en cada tanda
+    int minTiempoFab; 
+    int maxTiempoFab; //tiempo aleatorio de fabricacion por tanda
     int maxTiempoReparto; //tiempo aleatorio del reparto
     DatosCompartidos *datos; //puntero para poder tocar stock[], esperando []
 } Fabrica;
@@ -33,17 +35,19 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
     Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
     int fabricadas = 0; //va contando el numero de vacuna que lleva hechas la fabrica 
 
-    while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta
+    while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
         // 1️⃣ Fabricar una tanda
-        int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda;
-        if (fabricadas + tanda > f->vacunasTotales)
-            tanda = f->vacunasTotales - fabricadas;
-        int tiempo = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab;
-        printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
-        sleep(tiempo);
-        fabricadas += tanda;
+        int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; //50-25+1 = 26 (porque los numeros posibles son 25, 26, ..., 50: 26 numeros) rand()%26 da un numero entre 0 y 25 le sumamos el minimo 25 y pasa de 0..25 a 25..50, tanda queda entre 25 y 50
+        if (fabricadas + tanda > f->vacunasTotales){ //si las fabricadas y la tanda que le toca fabricar es mayor que las vacunas totales
+            tanda = f->vacunasTotales - fabricadas; //la tanda seria vacunastotales-fabricadas, es decir solo haria ya las que falten 
+        }
 
-        // 2️⃣ Reparto
+        int tiempo = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; //esto es lo mismo que antes con lo de tanda
+        printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
+        sleep(tiempo); //el hilo se duerme mientras el tiempo de fabricacion
+        fabricadas += tanda; //aqui se actualizan las fabricadas se suma a las fabricadas las hechas en la tanda
+
+        //Reparto de vacunas y para que sea segura se hace con threads 
         pthread_mutex_lock(&f->datos->mutex);
 
         int centrosConEspera = 0;
@@ -136,9 +140,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    Fabrica fa; 
     int habitantesTotales;
     int vacunasInicialesPorCentro;
-    int minVacTanda, maxVacTanda;
+    int minVacTanda;
+    int maxVacTanda;
     int minTiempoFab, maxTiempoFab;
     int maxTiempoReparto;
     int maxTiempoReaccion;
