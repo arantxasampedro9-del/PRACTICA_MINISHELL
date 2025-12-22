@@ -12,7 +12,6 @@
 typedef struct {
     int stock[CENTROS];        // Vacunas disponibles por centro
     int esperando[CENTROS];    // Personas esperando en cada centro
-
     pthread_mutex_t mutex;     
     pthread_cond_t hayVacunas[CENTROS];
 } DatosCompartidos;
@@ -25,6 +24,7 @@ typedef struct {
     int maxTiempoReparto;
     DatosCompartidos *datos;
 } Fabrica;
+
 void* hiloFabrica(void *arg) {
     Fabrica *f = (Fabrica*) arg;
     int fabricadas = 0;
