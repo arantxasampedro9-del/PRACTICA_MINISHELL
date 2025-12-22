@@ -1,23 +1,20 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdio.h> //printf
+#include <stdlib.h> //rand, malloc
 #include <pthread.h>
-#include <unistd.h>
-#include <time.h>
-#include <stdarg.h>
-#include <string.h>
-#include <errno.h>
+#include <unistd.h> //sleep
+#include <time.h> //time()
 
-#define CENTROS 5
+#define CENTROS 5 //hay 5 centros
 
-typedef struct {
-    int stock[CENTROS];        // Vacunas disponibles por centro
+typedef struct { //lo que comparten las fabricas y los habitantes
+    int vacunaDisponibles[CENTROS]; // Vacunas disponibles por centro
     int esperando[CENTROS];    // Personas esperando en cada centro
-    pthread_mutex_t mutex;     
-    pthread_cond_t hayVacunas[CENTROS];
+    pthread_mutex_t mutex;     //candado para que no se pisen varios thread al leer/escribir stock y esperando
+    pthread_cond_t hayVacunas[CENTROS]; //señal para despertar a personas qeu estan esperando vacunas en el centro i 
 } DatosCompartidos;
 
 typedef struct {
-    int id;
+    int idFabrica;
     int vacunasTotales;
     int minTanda, maxTanda;
     int minTiempoFab, maxTiempoFab;
@@ -38,7 +35,7 @@ void* hiloFabrica(void *arg) {
 
         int tiempo = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab;
 
-        printf("Fábrica %d prepara %d vacunas\n", f->id, tanda);
+        printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
         sleep(tiempo);
 
         fabricadas += tanda;
@@ -54,9 +51,9 @@ void* hiloFabrica(void *arg) {
         // 🔹 Antiinanición: al menos 1 vacuna a centros con espera
         for (int i = 0; i < CENTROS && tanda > 0; i++) {
             if (f->datos->esperando[i] > 0) {
-                f->datos->stock[i]++;
+                f->datos->vacunaDisponibles[i]++;
                 tanda--;
-                printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->id, i + 1);
+                printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, i + 1);
                 pthread_cond_signal(&f->datos->hayVacunas[i]);
             }
         }
@@ -64,8 +61,8 @@ void* hiloFabrica(void *arg) {
         // 🔹 Reparto del resto de forma equilibrada
         int i = 0;
         while (tanda > 0) {
-            f->datos->stock[i % CENTROS]++;
-            printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->id, (i % CENTROS) + 1);
+            f->datos->vacunaDisponibles[i % CENTROS]++;
+            printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, (i % CENTROS) + 1);
             pthread_cond_signal(&f->datos->hayVacunas[i % CENTROS]);
             tanda--;
             i++;
@@ -77,7 +74,7 @@ void* hiloFabrica(void *arg) {
         sleep(rand() % f->maxTiempoReparto + 1);
     }
 
-    printf("Fábrica %d ha fabricado todas sus vacunas\n", f->id);
+    printf("Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
     pthread_exit(NULL);
 }
 
