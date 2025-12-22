@@ -49,37 +49,44 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         fabricadas += tanda; //aqui se actualizan las fabricadas se suma a las fabricadas las hechas en la tanda
 
         //Reparto de vacunas y para que sea segura se hace con threads 
-        pthread_mutex_lock(&f->datos->mutex);
+        pthread_mutex_lock(&f->datos->mutex); //esto es voy a tocar datos compartidos, como otros threads pueden tocar esos datos se necesita el candado para q no se pisen 
 
-        int centrosConEspera = 0;
-        for (int i = 0; i < CENTROS; i++)
-            if (f->datos->esperando[i] > 0)
+        int centrosConEspera = 0; //para contar cuantos centros tienen gente esperando
+        for (int i = 0; i < CENTROS; i++) //recorre los 5 centros 
+            if (f->datos->esperando[i] > 0)//si en el centro i hay al menos 1 persona, suma 1 al contador de los centros que tienen espera
                 centrosConEspera++;
 
-        // 🔹 Antiinanición: al menos 1 vacuna a centros con espera
-        for (int i = 0; i < CENTROS && tanda > 0; i++) {
-            if (f->datos->esperando[i] > 0) {
+        // Reparte una vacuna a centros que tienen espera (si quedan vacunas en la tanda)
+        for (int i = 0; i < CENTROS && tanda > 0; i++) { //va centro por centro pero solo si aun queda vacunas en tanda (tanda>0)
+            if (f->datos->esperando[i] > 0) { //si el centro tiene gente esperando, incrementa las vacunas disponibles de ese centro
                 f->datos->vacunaDisponibles[i]++;
                 tanda--;
                 printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, i + 1);
-                pthread_cond_signal(&f->datos->hayVacunas[i]);
+                pthread_cond_signal(&f->datos->hayVacunas[i]); //despertar a un habitante que este esperando en ese centro
             }
         }
 
-        // 🔹 Reparto del resto de forma equilibrada
-        int i = 0;
-        while (tanda > 0) {
-            f->datos->vacunaDisponibles[i % CENTROS]++;
+        // Reparto del resto de forma equilibrada
+        int i = 0; //contador para ir pasando por lo centros en orden 0, 1, 2, 3, 4, 0, 1, 2
+        while (tanda > 0) { //mientras queden vacunas en la tanda, cada vuelta reparte 1 vacuna
+            f->datos->vacunaDisponibles[i % CENTROS]++; //elige el centro al que toca. i % CENTROS (módulo) hace que el centro “vuelva a 0” cuando llega a 5.
+            //Con CENTROS=5:
+            //i=0 → 0%5=0 → centro 1
+            //i=1 → 1%5=1 → centro 2
+            //i=2 → 2%5=2 → centro 3
+            //i=3 → 3%5=3 → centro 4
+            //i=4 → 4%5=4 → centro 5
+            //i=5 → 5%5=0 → centro 1 otra vez
             printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, (i % CENTROS) + 1);
-            pthread_cond_signal(&f->datos->hayVacunas[i % CENTROS]);
+            pthread_cond_signal(&f->datos->hayVacunas[i % CENTROS]); //si hay habitante esperando en ese centro lo despiertas, solo despierta a uno porque solo repartimos una vacuna
             tanda--;
-            i++;
+            i++; //para que vaya al siguiente centro 
         }
 
-        pthread_mutex_unlock(&f->datos->mutex);
+        pthread_mutex_unlock(&f->datos->mutex);//hasta aqui estabamos tocando ell dato compartido de vacunadisponibles ahora ya se libera para que los hbaitantes puedan vacunarse 
 
         // Simula el tiempo de reparto
-        sleep(rand() % f->maxTiempoReparto + 1);
+        sleep(rand() % f->maxTiempoReparto + 1); //simulamos el tiempo de reparto que tarda entre 1 y maxtiemporeparto, si max es tres pues duerme entre 1, 2 o 3
     }
 
     printf("Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
@@ -176,21 +183,50 @@ int main(int argc, char *argv[]) {
     fclose(f);
 
     // 2) Mostrar configuración inicial (como el ejemplo)
-    printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+     printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+    fprintf(fSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+
     printf("Habitantes: %d\n", habitantesTotales);
+    fprintf(fSalida, "Habitantes: %d\n", habitantesTotales);
+
     printf("Centros de vacunación: %d\n", CENTROS);
+    fprintf(fSalida, "Centros de vacunación: %d\n", CENTROS);
+
     printf("Fábricas: %d\n", 3);
+    fprintf(fSalida, "Fábricas: %d\n", 3);
+
     printf("Vacunados por tanda: %d\n", habitantesTotales / 10);
+    fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / 10);
+
     printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+    fprintf(fSalida, "Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+
     printf("Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+    fprintf(fSalida, "Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+
     printf("Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+    fprintf(fSalida, "Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+
     printf("Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+    fprintf(fSalida, "Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+
     printf("Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+    fprintf(fSalida, "Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+
     printf("Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+    fprintf(fSalida, "Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+
     printf("Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+    fprintf(fSalida, "Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+
     printf("Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+    fprintf(fSalida, "Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+
     printf("Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+    fprintf(fSalida, "Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+
     printf("PROCESO DE VACUNACIÓN\n");
+    fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
 
     // 3) Inicializar datos compartidos
     DatosCompartidos datos;
@@ -278,7 +314,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Vacunación finalizada\n");
-
+    fprintf(fSalida, "Vacunación finalizada\n");
     // 7) Limpieza
     for (int i = 0; i < CENTROS; i++) {
         pthread_cond_destroy(&datos.hayVacunas[i]);
