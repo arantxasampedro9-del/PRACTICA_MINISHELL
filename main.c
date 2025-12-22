@@ -120,3 +120,152 @@ void* hiloHabitante(void *arg) {
     pthread_exit(NULL);
 }
 
+int main(int argc, char *argv[]) {
+    srand((unsigned int)time(NULL));
+
+    // 1) Leer fichero de entrada
+    const char *nombreFichero = "entrada.txt";
+    if (argc >= 2) nombreFichero = argv[1];
+
+    FILE *f = fopen(nombreFichero, "r");
+    if (!f) {
+        perror("Error abriendo fichero de entrada");
+        return 1;
+    }
+
+    int habitantesTotales;
+    int vacunasInicialesPorCentro;
+    int minVacTanda, maxVacTanda;
+    int minTiempoFab, maxTiempoFab;
+    int maxTiempoReparto;
+    int maxTiempoReaccion;
+    int maxTiempoDesplaz;
+
+    if (fscanf(f, "%d", &habitantesTotales) != 1 ||
+        fscanf(f, "%d", &vacunasInicialesPorCentro) != 1 ||
+        fscanf(f, "%d", &minVacTanda) != 1 ||
+        fscanf(f, "%d", &maxVacTanda) != 1 ||
+        fscanf(f, "%d", &minTiempoFab) != 1 ||
+        fscanf(f, "%d", &maxTiempoFab) != 1 ||
+        fscanf(f, "%d", &maxTiempoReparto) != 1 ||
+        fscanf(f, "%d", &maxTiempoReaccion) != 1 ||
+        fscanf(f, "%d", &maxTiempoDesplaz) != 1) {
+        fprintf(stderr, "Error: el fichero no tiene los 9 números requeridos.\n");
+        fclose(f);
+        return 1;
+    }
+    fclose(f);
+
+    // 2) Mostrar configuración inicial (como el ejemplo)
+    printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+    printf("Habitantes: %d\n", habitantesTotales);
+    printf("Centros de vacunación: %d\n", CENTROS);
+    printf("Fábricas: %d\n", 3);
+    printf("Vacunados por tanda: %d\n", habitantesTotales / 10);
+    printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+    printf("Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+    printf("Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+    printf("Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+    printf("Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+    printf("Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+    printf("Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+    printf("Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+    printf("Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+    printf("PROCESO DE VACUNACIÓN\n");
+
+    // 3) Inicializar datos compartidos
+    DatosCompartidos datos;
+
+    pthread_mutex_init(&datos.mutex, NULL);
+    for (int i = 0; i < CENTROS; i++) {
+        datos.vacunaDisponibles[i] = vacunasInicialesPorCentro;
+        datos.esperando[i] = 0;
+        pthread_cond_init(&datos.hayVacunas[i], NULL);
+    }
+
+    // 4) Crear fábricas (3 threads)
+    pthread_t thFabricas[3];
+    Fabrica fabricas[3];
+
+    // Reparto de cuota exacta (por si habitantes no divisible entre 3)
+    int baseCuota = habitantesTotales / 3;
+    int resto = habitantesTotales % 3;
+
+    for (int i = 0; i < 3; i++) {
+        fabricas[i].idFabrica = i + 1;
+        fabricas[i].vacunasTotales = baseCuota + (i < resto ? 1 : 0);
+        fabricas[i].minTanda = minVacTanda;
+        fabricas[i].maxTanda = maxVacTanda;
+        fabricas[i].minTiempoFab = minTiempoFab;
+        fabricas[i].maxTiempoFab = maxTiempoFab;
+        fabricas[i].maxTiempoReparto = maxTiempoReparto;
+        fabricas[i].datos = &datos;
+
+        if (pthread_create(&thFabricas[i], NULL, hiloFabrica, &fabricas[i]) != 0) {
+            perror("Error creando hilo de fábrica");
+            return 1;
+        }
+    }
+
+    // 5) Habitantes por tandas (10 tandas)
+    int totalTandas = 10;
+    int porTandaBase = habitantesTotales / totalTandas;
+    int restoTandas = habitantesTotales % totalTandas;
+
+    int idHabitante = 1;
+
+    for (int t = 0; t < totalTandas; t++) {
+        int tamTanda = porTandaBase + (t < restoTandas ? 1 : 0);
+
+        pthread_t *thHab = (pthread_t*)malloc(sizeof(pthread_t) * (size_t)tamTanda);
+        Habitante *hab = (Habitante*)malloc(sizeof(Habitante) * (size_t)tamTanda);
+
+        if (!thHab || !hab) {
+            fprintf(stderr, "Error: no hay memoria para crear la tanda.\n");
+            free(thHab);
+            free(hab);
+            return 1;
+        }
+
+        for (int i = 0; i < tamTanda; i++) {
+            hab[i].id = idHabitante++;
+            hab[i].maxTiempoReaccion = maxTiempoReaccion;
+            hab[i].maxTiempoDesplazamiento = maxTiempoDesplaz;
+            hab[i].datos = &datos;
+
+            if (pthread_create(&thHab[i], NULL, hiloHabitante, &hab[i]) != 0) {
+                perror("Error creando hilo de habitante");
+                // Join de los ya creados
+                for (int j = 0; j < i; j++) pthread_join(thHab[j], NULL);
+                free(thHab);
+                free(hab);
+                return 1;
+            }
+        }
+
+        // Esperar a que se vacune toda la tanda antes de llamar a la siguiente
+        for (int i = 0; i < tamTanda; i++) {
+            pthread_join(thHab[i], NULL);
+        }
+
+        free(thHab);
+        free(hab);
+    }
+
+    // 6) Esperar a que terminen las fábricas
+    for (int i = 0; i < 3; i++) {
+        pthread_join(thFabricas[i], NULL);
+    }
+
+    printf("Vacunación finalizada\n");
+
+    // 7) Limpieza
+    for (int i = 0; i < CENTROS; i++) {
+        pthread_cond_destroy(&datos.hayVacunas[i]);
+    }
+    pthread_mutex_destroy(&datos.mutex);
+
+    return 0;
+}
+
+
