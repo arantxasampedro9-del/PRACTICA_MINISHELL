@@ -12,63 +12,7 @@
 #include <errno.h>
 #define MAX 1024
 
-//para el jobs 
-typedef struct {
-    pid_t pid;
-    char comando[MAX];
-    int id;
-} trabajoBG;
 
-void redireccionEntrada(tline *line, int i, int *descriptorEntrada);
-void redireccionSalida(tline *line, int i, int numComandos, int *descriptorSalida);
-void ejecutar_cd(tline *line);
-void ejecutar_umask(tline *line);
-void ejecutar_exit();
-void ejecutar_jobs();
-void ejecutar_fg(tline *line);
-
-//cd
-char ruta[MAX];
-char dirTemporal[MAX];
-char *directorio;
-char *home;
-
-//umask
-char *argumento;
-char *final;
-mode_t miUmask; 
-long nuevaMascara;
-
-//jobs y fg
-trabajoBG *arrayTrabajos = NULL;
-int numTrabajos = 0;
-
-//jobs
-pid_t estadoProceso;
-
-//fg
-int id;
-
-int main(void) {
-    tline * line;
-
-    int descriptorEntrada;
-    int descriptorSalida;
-
-    char buf[MAX];
-
-    int ultimo;
-    pid_t pid1; 
-
-    int i, j, n;
-
-    //para la parte de control de comandos
-    int numComandos;
-    char comandoNuevo[MAX];
-    int tub[2]; 
-    pid_t hijo1, hijo2; //como son dos comandos necesitamos dos procesos hijo
-    int **tuberias;
-    pid_t *hijos;
 
     signal(SIGINT, SIG_IGN);
 
