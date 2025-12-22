@@ -51,11 +51,6 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         //Reparto de vacunas y para que sea segura se hace con threads 
         pthread_mutex_lock(&f->datos->mutex); //esto es voy a tocar datos compartidos, como otros threads pueden tocar esos datos se necesita el candado para q no se pisen 
 
-        int centrosConEspera = 0; //para contar cuantos centros tienen gente esperando
-        for (int i = 0; i < CENTROS; i++) //recorre los 5 centros 
-            if (f->datos->esperando[i] > 0)//si en el centro i hay al menos 1 persona, suma 1 al contador de los centros que tienen espera
-                centrosConEspera++;
-
         // Reparte una vacuna a centros que tienen espera (si quedan vacunas en la tanda)
         for (int i = 0; i < CENTROS && tanda > 0; i++) { //va centro por centro pero solo si aun queda vacunas en tanda (tanda>0)
             if (f->datos->esperando[i] > 0) { //si el centro tiene gente esperando, incrementa las vacunas disponibles de ese centro
