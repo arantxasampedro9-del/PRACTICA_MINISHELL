@@ -1,0 +1,16 @@
+VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL
+Habitantes: 1200
+Centros de vacunación: 5
+Fábricas: 3
+Vacunados por tanda: 120
+Vacunas iniciales en cada centro: 15
+Vacunas totales por fábrica: 400
+Mínimo número de vacunas fabricadas en cada tanda: 25
+Máximo número de vacunas fabricadas en cada tanda: 50
+Tiempo mínimo de fabricación de una tanda de vacunas: 20
+Tiempo máximo de fabricación de una tanda de vacunas: 40
+Tiempo máximo de reparto de vacunas a los centros: 3
+Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: 4
+Tiempo máximo de desplazamiento del habitante al centro de vacunación: 2
+PROCESO DE VACUNACIÓN
+Vacunación finalizada
