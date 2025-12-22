@@ -29,22 +29,18 @@ typedef struct {
     DatosCompartidos *datos;
 } Habitante;
 
-void* hiloFabrica(void *arg) {
-    Fabrica *f = (Fabrica*) arg;
-    int fabricadas = 0;
+void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
+    Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
+    int fabricadas = 0; //va contando el numero de vacuna que lleva hechas la fabrica 
 
-    while (fabricadas < f->vacunasTotales) {
-
+    while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta
         // 1️⃣ Fabricar una tanda
         int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda;
         if (fabricadas + tanda > f->vacunasTotales)
             tanda = f->vacunasTotales - fabricadas;
-
         int tiempo = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab;
-
         printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
         sleep(tiempo);
-
         fabricadas += tanda;
 
         // 2️⃣ Reparto
@@ -88,37 +84,44 @@ void* hiloFabrica(void *arg) {
 void* hiloHabitante(void *arg) {
     Habitante *h = (Habitante*) arg;
 
-    /* 1️⃣ Tiempo hasta darse cuenta de la cita */
-    sleep(rand() % h->maxTiempoReaccion + 1);
+    /* 1) Tiempo hasta darse cuenta de la cita (min=1) */
+    sleep((unsigned int)(rand() % h->maxTiempoReaccion + 1));
 
-    /* 2️⃣ Elegir centro */
+    /* 2) Elegir centro */
     int centro = rand() % CENTROS;
     printf("Habitante %d elige el centro %d para vacunarse\n",
            h->id, centro + 1);
 
-    /* 3️⃣ Desplazamiento al centro */
-    sleep(rand() % h->maxTiempoDesplazamiento + 1);
+    /* 3) Desplazamiento al centro (min=1) */
+    sleep((unsigned int)(rand() % h->maxTiempoDesplazamiento + 1));
 
-    /* 4️⃣ Intento de vacunación */
+    /* 4) Intentar vacunarse / esperar */
     pthread_mutex_lock(&h->datos->mutex);
 
+    /* Se registra como esperando UNA vez */
+    h->datos->esperando[centro]++;
+
+    /* Mientras no haya vacunas, espera */
     while (h->datos->vacunaDisponibles[centro] == 0) {
-        /* No hay vacunas → esperar */
-        h->datos->esperando[centro]++;
-        pthread_cond_wait(&h->datos->hayVacunas[centro],
-                          &h->datos->mutex);
-        h->datos->esperando[centro]--;
+        pthread_cond_wait(&h->datos->hayVacunas[centro], &h->datos->mutex);
+        /* Al despertar, vuelve aquí con el mutex cogido */
     }
 
-    /* Vacunación */
+    /* Ya hay vacuna disponible: vacunación */
     h->datos->vacunaDisponibles[centro]--;
+
+    /* Deja de estar esperando */
+    h->datos->esperando[centro]--;
+
     printf("Habitante %d vacunado en el centro %d\n",
            h->id, centro + 1);
 
     pthread_mutex_unlock(&h->datos->mutex);
 
     pthread_exit(NULL);
+    return NULL;
 }
+
 
 int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
