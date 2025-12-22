@@ -183,21 +183,50 @@ int main(int argc, char *argv[]) {
     fclose(f);
 
     // 2) Mostrar configuración inicial (como el ejemplo)
-    printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+     printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+    fprintf(fSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+
     printf("Habitantes: %d\n", habitantesTotales);
+    fprintf(fSalida, "Habitantes: %d\n", habitantesTotales);
+
     printf("Centros de vacunación: %d\n", CENTROS);
+    fprintf(fSalida, "Centros de vacunación: %d\n", CENTROS);
+
     printf("Fábricas: %d\n", 3);
+    fprintf(fSalida, "Fábricas: %d\n", 3);
+
     printf("Vacunados por tanda: %d\n", habitantesTotales / 10);
+    fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / 10);
+
     printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+    fprintf(fSalida, "Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+
     printf("Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+    fprintf(fSalida, "Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+
     printf("Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+    fprintf(fSalida, "Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+
     printf("Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+    fprintf(fSalida, "Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+
     printf("Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+    fprintf(fSalida, "Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+
     printf("Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+    fprintf(fSalida, "Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+
     printf("Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+    fprintf(fSalida, "Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+
     printf("Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+    fprintf(fSalida, "Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+
     printf("Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+    fprintf(fSalida, "Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+
     printf("PROCESO DE VACUNACIÓN\n");
+    fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
 
     // 3) Inicializar datos compartidos
     DatosCompartidos datos;
@@ -285,7 +314,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Vacunación finalizada\n");
-
+    fprintf(fSalida, "Vacunación finalizada\n");
     // 7) Limpieza
     for (int i = 0; i < CENTROS; i++) {
         pthread_cond_destroy(&datos.hayVacunas[i]);
