@@ -76,9 +76,12 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
   
     vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por asignar
     while (vacunasSobrantes > 0) { 
-
+        centroMayorDemanda= 0;
+        
         for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
-            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) centroMayorDemanda = j;
+            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
+                centroMayorDemanda = j;
+            }
         }
 
         repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
