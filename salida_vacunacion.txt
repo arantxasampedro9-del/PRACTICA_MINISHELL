@@ -1,0 +1,98 @@
+VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL
+Habitantes: 1200
+Centros de vacunación: 5
+Fábricas: 3
+Vacunados por tanda: 120
+Vacunas iniciales en cada centro: 15
+Vacunas totales por fábrica: 400
+Mínimo número de vacunas fabricadas en cada tanda: 25
+Máximo número de vacunas fabricadas en cada tanda: 50
+Tiempo mínimo de fabricación de una tanda de vacunas: 20
+Tiempo máximo de fabricación de una tanda de vacunas: 40
+Tiempo máximo de reparto de vacunas a los centros: 3
+Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: 4
+Tiempo máximo de desplazamiento del habitante al centro de vacunación: 2
+PROCESO DE VACUNACIÓN
+Fábrica 1 prepara 39 vacunas
+Fábrica 2 prepara 34 vacunas
+Fábrica 3 prepara 41 vacunas
+Fábrica 1 entrega 9 vacunas en el centro 1
+Fábrica 1 entrega 16 vacunas en el centro 2
+Fábrica 1 entrega 6 vacunas en el centro 3
+Fábrica 1 entrega 5 vacunas en el centro 4
+Fábrica 3 entrega 9 vacunas en el centro 1
+Fábrica 1 entrega 3 vacunas en el centro 5
+Fábrica 1 prepara 45 vacunas
+Fábrica 2 entrega 7 vacunas en el centro 1
+Fábrica 3 entrega 0 vacunas en el centro 2
+Fábrica 2 entrega 0 vacunas en el centro 2
+Fábrica 3 entrega 9 vacunas en el centro 3
+Fábrica 2 entrega 7 vacunas en el centro 3
+Fábrica 2 entrega 3 vacunas en el centro 4
+Fábrica 3 entrega 4 vacunas en el centro 4
+Fábrica 2 entrega 17 vacunas en el centro 5
+Fábrica 2 prepara 47 vacunas
+Fábrica 3 entrega 19 vacunas en el centro 5
+Fábrica 3 prepara 28 vacunas
+Fábrica 3 entrega 5 vacunas en el centro 1
+Fábrica 1 entrega 8 vacunas en el centro 1
+Fábrica 1 entrega 19 vacunas en el centro 2
+Fábrica 3 entrega 12 vacunas en el centro 2
+Fábrica 1 entrega 11 vacunas en el centro 3
+Fábrica 3 entrega 7 vacunas en el centro 3
+Fábrica 1 entrega 7 vacunas en el centro 4
+Fábrica 1 entrega 0 vacunas en el centro 5
+Fábrica 1 prepara 48 vacunas
+Fábrica 3 entrega 4 vacunas en el centro 4
+Fábrica 3 entrega 0 vacunas en el centro 5
+Fábrica 3 prepara 31 vacunas
+Fábrica 2 entrega 13 vacunas en el centro 1
+Fábrica 2 entrega 6 vacunas en el centro 2
+Fábrica 2 entrega 13 vacunas en el centro 3
+Fábrica 2 entrega 15 vacunas en el centro 4
+Fábrica 2 entrega 0 vacunas en el centro 5
+Fábrica 2 prepara 48 vacunas
+Fábrica 1 entrega 14 vacunas en el centro 1
+Fábrica 1 entrega 6 vacunas en el centro 2
+Fábrica 1 entrega 14 vacunas en el centro 3
+Fábrica 1 entrega 13 vacunas en el centro 4
+Fábrica 1 entrega 1 vacunas en el centro 5
+Fábrica 1 prepara 41 vacunas
+Fábrica 3 entrega 0 vacunas en el centro 1
+Fábrica 3 entrega 11 vacunas en el centro 2
+Fábrica 3 entrega 0 vacunas en el centro 3
+Fábrica 3 entrega 10 vacunas en el centro 4
+Fábrica 3 entrega 10 vacunas en el centro 5
+Fábrica 3 prepara 33 vacunas
+Fábrica 2 entrega 16 vacunas en el centro 1
+Fábrica 2 entrega 8 vacunas en el centro 2
+Fábrica 2 entrega 12 vacunas en el centro 3
+Fábrica 2 entrega 4 vacunas en el centro 4
+Fábrica 1 entrega 6 vacunas en el centro 1
+Fábrica 2 entrega 8 vacunas en el centro 5
+Fábrica 2 prepara 27 vacunas
+Fábrica 1 entrega 5 vacunas en el centro 2
+Fábrica 1 entrega 16 vacunas en el centro 3
+Fábrica 1 entrega 4 vacunas en el centro 4
+Fábrica 1 entrega 10 vacunas en el centro 5
+Fábrica 1 prepara 26 vacunas
+Fábrica 3 entrega 19 vacunas en el centro 1
+Fábrica 3 entrega 14 vacunas en el centro 2
+Fábrica 3 entrega 0 vacunas en el centro 3
+Fábrica 3 entrega 0 vacunas en el centro 4
+Fábrica 3 entrega 0 vacunas en el centro 5
+Fábrica 3 prepara 45 vacunas
+Fábrica 2 entrega 3 vacunas en el centro 1
+Fábrica 2 entrega 5 vacunas en el centro 2
+Fábrica 2 entrega 6 vacunas en el centro 3
+Fábrica 2 entrega 4 vacunas en el centro 4
+Fábrica 2 entrega 9 vacunas en el centro 5
+Fábrica 2 prepara 43 vacunas
+Fábrica 1 entrega 2 vacunas en el centro 1
+Fábrica 1 entrega 4 vacunas en el centro 2
+Fábrica 1 entrega 5 vacunas en el centro 3
+Fábrica 1 entrega 4 vacunas en el centro 4
+Fábrica 3 entrega 3 vacunas en el centro 1
+Fábrica 3 entrega 8 vacunas en el centro 2
+Fábrica 1 entrega 11 vacunas en el centro 5
+Fábrica 1 pre
