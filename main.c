@@ -382,7 +382,7 @@ void* hiloFabrica(void *arg) {
 
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
-        // 1. Fabrica una tanda
+        //Fabrica una tanda
         tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; 
         if (fabricadas + tanda > f->vacunasTotales){ 
             tanda = f->vacunasTotales - fabricadas; 
