@@ -6,21 +6,22 @@
 
 #define CENTROS 5 
 
-typedef struct { //lo que comparten las fabricas y los habitantes
+//lo que comparten las fabricas y los habitantes
+typedef struct { 
     int vacunaDisponibles[CENTROS]; 
     int esperando[CENTROS];    
     pthread_mutex_t mutex;     //para que no se pisen varios thread al leer/escribir stock y esperando
     pthread_cond_t hayVacunas[CENTROS]; //señal para personas que están esperando vacunas en el centro i 
     FILE *fSalida;
     //para las estadísticas 
-    int vacunasFabricadasPorFabrica[3];      
-    int vacunasEntregadasPorFabrica[3][CENTROS]; 
-    int vacunasRecibidasPorCentro[CENTROS];   
-    int vacunadosPorCentro[CENTROS];     
+    int vacunasFabricadas[3];      
+    int vacunasEntregadas[3][CENTROS]; 
+    int vacunasRecibidas[CENTROS];   
+    int habitantesVacunados[CENTROS];     
     // Para que las fábricas puedan terminar aunque no haya demanda 
     int totalVacunados;      
     int habitantesTotales;
-} DatosCompartidos;
+} DatosGenerales;
 
 typedef struct {
     int idFabrica; 
@@ -30,37 +31,32 @@ typedef struct {
     int minTiempoFab; 
     int maxTiempoFab; 
     int maxTiempoReparto; 
-    DatosCompartidos *datos;
+    DatosGenerales *datos;
 } Fabrica;
 
 typedef struct {
     int idHiloHabitante;
     int maxTiempoReaccion;
     int maxTiempoDesplazamiento;
-    DatosCompartidos *datos; 
+    DatosGenerales *datos; 
 } Habitante;
 
-// Calcula cómo repartir "total" vacunas entre los 5 centros según la demanda (esperando[]).
-// - Si nadie espera (suma=0), NO reparte nada (todo 0).
-// - Si hay demanda, reparte proporcionalmente.
-// - Asegura que la suma del reparto sea EXACTAMENTE "total" (cuando suma>0).
+//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
 static void calcularReparto(const int esperando[CENTROS], int total, int reparto[CENTROS]) {
-    //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda, es decir, de la gente esperando en cada centro
-   
-    int i; //indice para recorrer los centros
-    int suma = 0; // total de personas esperando entre todos los centros
-    int asignado = 0; //vacunas ya asignadas
-    int resto; //vacunas que sobran 
-    int pesos[CENTROS];//copia de esperando[] para no modificar el original
+    int i; 
+    int suma = 0; 
+    int vacunasAsignadas = 0; 
+    int vacunasSobrantes; 
+    int copiaEsperando[CENTROS];//copia de esperando[] para no modificar el original
 
     // Copiamos pesos (demanda) y evitamos valores negativos por seguridad
     for (i = 0; i < CENTROS; i++) {
         reparto[i] = 0; //inicializamos a 0 para que nadie reciba vacunas todavia
-        pesos[i] = esperando[i]; //copiamos la demanda del centro i
-        if (pesos[i] < 0){
-            pesos[i] = 0;// por si acaso hay valores incorrectos aignamos a 0
+        copiaEsperando[i] = esperando[i]; //copiamos la demanda del centro i
+        if (copiaEsperando[i] < 0){
+            copiaEsperando[i] = 0;// por si acaso hay valores incorrectos aignamos a 0
         }
-        suma += pesos[i]; //suma guarda toda la gente esperando en todos los centros
+        suma += copiaEsperando[i]; //suma guarda toda la gente esperando en todos los centros
     }
 
     if (suma == 0) {
@@ -69,10 +65,10 @@ static void calcularReparto(const int esperando[CENTROS], int total, int reparto
 
     //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos, lon long = 8bytes
     for (i = 0; i < CENTROS; i++) {
-        long long num = (long long)total * (long long)pesos[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
+        long long num = (long long)total * (long long)copiaEsperando[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
         int q = (int)(num / (long long)suma); //parte entera de la division
         reparto[i] = q; //asigna esas vacunas al centro i
-        asignado += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
+        vacunasAsignadas += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
     }
     /*EJEMPLO DE LO QUE HACE: ES UNA REGLA DE TRES
     suma - total de vacunas
@@ -85,21 +81,21 @@ static void calcularReparto(const int esperando[CENTROS], int total, int reparto
     */
 
     // Ajuste del resto: repartir 1 a 1 a los centros con más demanda
-    resto = total - asignado; //calculamos cuantas vacunas nos quedan por asignar
-    while (resto > 0) { //si queda alguna vacuna por asignar
+    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por asignar
+    while (vacunasSobrantes > 0) { //si queda alguna vacuna por asignar
         int best = 0; //best guarda el centro con mayor demanda, empieza en el 0
         int j;
 
         for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
-            if (pesos[j] > pesos[best]) best = j;
+            if (copiaEsperando[j] > copiaEsperando[best]) best = j;
         }
 
         reparto[best]++; //le damos una vacuna al centro con mas demanda
-        resto--; //quitamos una vacuna de las que quedaban por aisgnar para saber si seguir en el bucle o no
+        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por aisgnar para saber si seguir en el bucle o no
 
         // Bajamos ligeramente el peso para que si hay empate largo no gane siempre el mismo
-        if (pesos[best] > 0){
-            pesos[best]--; //quitamos 1 a la demanda de ese centro para que si hay empate no gane siempre el mismo centro
+        if (copiaEsperando[best] > 0){
+            copiaEsperando[best]--; //quitamos 1 a la demanda de ese centro para que si hay empate no gane siempre el mismo centro
             //reparto equilibrado 
         }
     }
@@ -131,7 +127,7 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         //estadistica: sumar vacunas fabricadas por esta fabrica 
         //Entras en sección crítica porque vas a modificar un dato compartido entre threads. En concreto, vas a tocar vacunasFabricadasPorFabrica[], que lo pueden tocar las 3 fábricas.
         pthread_mutex_lock(&f->datos->mutex);
-        f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda; //actualizas estadística global de fabricación: f->idFabrica es 1,2,3 (como lo tienes), arrays empiezan en 0, por eso -1 → posiciones 0,1,2. Suma esta tanda al total fabricado por esa fábrica.
+        f->datos->vacunasFabricadas[f->idFabrica - 1] += tanda; //actualizas estadística global de fabricación: f->idFabrica es 1,2,3 (como lo tienes), arrays empiezan en 0, por eso -1 → posiciones 0,1,2. Suma esta tanda al total fabricado por esa fábrica.
         pthread_mutex_unlock(&f->datos->mutex);
 
         // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
@@ -176,8 +172,8 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             f->datos->vacunaDisponibles[i] += reparto[i]; //llegan "reparto[i]" vacunas al centro i
 
             // Estadísticas: entregadas por fábrica y recibidas por centro
-            f->datos->vacunasEntregadasPorFabrica[f->idFabrica - 1][i] += reparto[i];
-            f->datos->vacunasRecibidasPorCentro[i] += reparto[i];
+            f->datos->vacunasEntregadas[f->idFabrica - 1][i] += reparto[i];
+            f->datos->vacunasRecibidas[i] += reparto[i];
 
             // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
             pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
@@ -234,7 +230,7 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
     habitante->datos->vacunaDisponibles[centro]--;
     habitante->datos->esperando[centro]--;
         // Estadística: un vacunado más en este centro
-    habitante->datos->vacunadosPorCentro[centro]++;
+    habitante->datos->habitantesVacunados[centro]++;
 
     // ✅ Para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
     habitante->datos->totalVacunados++;
@@ -345,7 +341,7 @@ int main(int argc, char *argv[]) {
     fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
 
     // 3) Inicializar datos compartidos
-    DatosCompartidos datos;
+    DatosGenerales datos;
     datos.fSalida = fSalida;
 
     // ✅ Para que las fábricas puedan terminar correctamente
@@ -356,16 +352,16 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < CENTROS; i++) {
         datos.vacunaDisponibles[i] = vacunasInicialesPorCentro;
         datos.esperando[i] = 0;
-        datos.vacunasRecibidasPorCentro[i] = vacunasInicialesPorCentro; 
-        datos.vacunadosPorCentro[i] = 0;
+        datos.vacunasRecibidas[i] = vacunasInicialesPorCentro; 
+        datos.habitantesVacunados[i] = 0;
         pthread_cond_init(&datos.hayVacunas[i], NULL);
     }
 
         // Inicializar estadísticas
     for (int i = 0; i < 3; i++) {
-        datos.vacunasFabricadasPorFabrica[i] = 0;
+        datos.vacunasFabricadas[i] = 0;
         for (int c = 0; c < CENTROS; c++) {
-            datos.vacunasEntregadasPorFabrica[i][c] = 0;
+            datos.vacunasEntregadas[i][c] = 0;
         }
     }
    
@@ -454,12 +450,12 @@ int main(int argc, char *argv[]) {
 
     // Por cada fábrica: fabricadas y entregadas por centro
     for (int i = 0; i < 3; i++) {
-        printf("Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadasPorFabrica[i]);
-        fprintf(fSalida, "Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadasPorFabrica[i]);
+        printf("Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadas[i]);
+        fprintf(fSalida, "Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadas[i]);
 
         for (int c = 0; c < CENTROS; c++) {
-            printf("  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadasPorFabrica[i][c]);
-            fprintf(fSalida, "  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadasPorFabrica[i][c]);
+            printf("  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadas[i][c]);
+            fprintf(fSalida, "  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadas[i][c]);
         }
     }
 
@@ -469,14 +465,14 @@ int main(int argc, char *argv[]) {
 
         printf("Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
                c + 1,
-               datos.vacunasRecibidasPorCentro[c],
-               datos.vacunadosPorCentro[c],
+               datos.vacunasRecibidas[c],
+               datos.habitantesVacunados[c],
                sobrantes);
 
         fprintf(fSalida, "Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
                 c + 1,
-                datos.vacunasRecibidasPorCentro[c],
-                datos.vacunadosPorCentro[c],
+                datos.vacunasRecibidas[c],
+                datos.habitantesVacunados[c],
                 sobrantes);
     }
 
