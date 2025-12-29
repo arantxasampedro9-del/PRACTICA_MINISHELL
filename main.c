@@ -37,7 +37,7 @@ typedef struct {
     int idHiloHabitante;
     int maxTiempoReaccion;
     int maxTiempoDesplazamiento;
-    DatosCompartidos *datos; //puntero para poder modificar mutex, vacunas...etc
+    DatosCompartidos *datos; 
 } Habitante;
 
 // Calcula cómo repartir "total" vacunas entre los 5 centros según la demanda (esperando[]).
