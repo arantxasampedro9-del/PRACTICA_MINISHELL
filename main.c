@@ -425,7 +425,6 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
 
         if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
             copiaPersonasEnEspera[centroMayorDemanda]--; 
-            //reparto equilibrado 
         }
     }
 }
