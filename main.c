@@ -54,7 +54,7 @@ void* hiloFabrica(void *arg) {
     int fabricadas = 0; //va contando el numero de vacunas que lleva hechas la fabrica 
     int tiempoFab;
     int tanda;
-    int tiempoRep;
+    int tiempoReparto;
 
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
@@ -99,31 +99,24 @@ void* hiloFabrica(void *arg) {
                 reparto[k % CENTROS]++; 
             }
         }
-
-        // 3️. Repartir a cada centro
+        //Repartir vacunas a cada centro
         for (int i = 0; i < CENTROS; i++) {
             if (reparto[i] <= 0){
                 continue;
             } 
             // Simula el tiempo de reparto a este centro
-            tiempoRep = rand() % f->maxTiempoReparto + 1;
-            sleep((unsigned int)tiempoRep);
-
-            // Zona crítica: actualizar stock del centro y estadísticas + despertar habitantes
+            tiempoReparto = rand() % f->maxTiempoReparto + 1;
+            sleep((unsigned int)tiempoReparto);
+            // Actualizar vacunas disponibles del centro
             pthread_mutex_lock(&f->datos->mutex);
-
-            f->datos->vacunaDisponibles[i] += reparto[i]; //llegan "reparto[i]" vacunas al centro i
-
+            f->datos->vacunaDisponibles[i] += reparto[i];
             // Estadísticas: entregadas por fábrica y recibidas por centro
             f->datos->vacunasEntregadas[f->idFabrica - 1][i] += reparto[i];
             f->datos->vacunasRecibidas[i] += reparto[i];
-
             // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
             pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
-
             pthread_mutex_unlock(&f->datos->mutex);
-
-            // Mostrar por pantalla y guardar en fichero cuántas vacunas entrega a cada centro (como el ejemplo del enunciado)
+            
             printf("Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
             fprintf(f->datos->fSalida, "Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
         }
