@@ -429,28 +429,26 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
 void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
 
-    sleep((rand() % habitante->maxTiempoReaccion + 1)); //El mínimo es 1, lo que hace es generar un numero aleatorio entre 1 y maxTiempoReaccion
+    sleep((rand() % habitante->maxTiempoReaccion + 1)); 
 
-    int centro = rand() % CENTROS; //de entre todos los centros disponibles selecciona uno aleatoriamente
+    int centro = rand() % CENTROS; //Seleccion de centro aleatorio
     printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
     fprintf(habitante->datos->fSalida, "Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
    
-    sleep((rand() % habitante->maxTiempoDesplazamiento + 1));  //El mínimo es 1 lo que hace es generar un numero aleatorio entre 1 y maxTiempoDesplazamiento
+    sleep((rand() % habitante->maxTiempoDesplazamiento + 1)); 
 
-    //ZONA CRITICA, dos personas no pueden vacunarse a la vez en el mismo centro, solo un hilo puede tener el mutex a la vez
+    //os personas no pueden vacunarse a la vez en el mismo centro
     pthread_mutex_lock(&habitante->datos->mutex); 
-    
-    habitante->datos->personasEnEspera[centro]++; //el habitante esta disponible para ser vacunado por lo que aumento en 1 el numero de habitantes esperando en ese centro
+    habitante->datos->personasEnEspera[centro]++; //El habitante esta disponible para ser vacunado por lo que aumentamos el numero de habitantes esperando en ese centro
 
     while (habitante->datos->vacunaDisponibles[centro] == 0) { 
         pthread_cond_wait(&habitante->datos->hayVacunas[centro], &habitante->datos->mutex); 
-        //con esto el hilo se duerme hasta recibir una señal de que haya una vacuna y proceder a la vacunacion recuperando el mutex
+        //con esto el hilo se duerme hasta recibir una señal de que hay una vacuna y proceder a la vacunacion recuperando el mutex
     }
 
     //como hemos salido del while significa que  hay al menos una vacuna disponible y por tanto el paciente ha sido vacunado
     habitante->datos->vacunaDisponibles[centro]--;
     habitante->datos->personasEnEspera[centro]--;
-    
     habitante->datos->habitantesVacunados[centro]++; 
 
     // para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
