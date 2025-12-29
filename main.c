@@ -43,7 +43,8 @@ typedef struct {
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
 static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
-    int i, q, j; 
+    int i, j; 
+    int v; 
     int totalPersonasEsperando= 0; 
     int vacunasAsignadas = 0; 
     int centroMayorDemanda;
@@ -55,9 +56,6 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
     for (i = 0; i < CENTROS; i++) {
         repartoVacunas[i] = 0; 
         copiaPersonasEnEspera[i] = personasEnEspera[i]; 
-        if (copiaPersonasEnEspera[i] < 0){
-            copiaPersonasEnEspera[i] = 0;// por si acaso hay valores incorrectos asignamos a 0
-        }
         totalPersonasEsperando += copiaPersonasEnEspera[i]; 
     }
 
@@ -68,13 +66,12 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
     //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
     for (i = 0; i < CENTROS; i++) {
         num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
-        q = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
-        repartoVacunas[i] = q; //asigna esas vacunas al centro i
-        vacunasAsignadas += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
+        v = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
+        repartoVacunas[i] = v; //asigna esas vacunas al centro i
+        vacunasAsignadas += v; //con esto sabemos cuantas vacunas hemos asignado ya en total
     }
-  
-  
-    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por asignar
+
+    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por repartir
     while (vacunasSobrantes > 0) { 
         centroMayorDemanda= 0;
         
@@ -85,7 +82,7 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
         }
 
         repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
-        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por asignar para saber si seguir en el bucle o no
+        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por repartir
 
         if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
             copiaPersonasEnEspera[centroMayorDemanda]--; 
