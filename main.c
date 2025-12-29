@@ -49,83 +49,7 @@ int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int m
 void mostrarEstadisticasFinales(DatosGenerales *datos);
 void limpiarDatos(DatosGenerales *datos);
 void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
-void* hiloFabrica(void *arg) {
-    Fabrica *f = (Fabrica*) arg; 
-    int fabricadas = 0; //va contando el numero de vacunas que lleva hechas la fabrica 
-    int tiempoFab;
-    int tanda;
-    int tiempoReparto;
-
-
-    while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
-        // 1. Fabrica una tanda
-        tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; 
-        if (fabricadas + tanda > f->vacunasTotales){ 
-            tanda = f->vacunasTotales - fabricadas; 
-        }
-        tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; 
-        printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
-        fprintf(f->datos->fSalida, "Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
-
-        sleep((unsigned int)tiempoFab); //el hilo lo dormimos durante el tiempo de fabricacion
-        fabricadas += tanda; 
-        //Vamos a modificar un dato compartido entre threads. (Para la estadística) 
-        pthread_mutex_lock(&f->datos->mutex);
-        f->datos->vacunasFabricadas[f->idFabrica - 1] += tanda; 
-        pthread_mutex_unlock(&f->datos->mutex);
-
-        // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
-        // Para no tener el mutex mucho rato, hacemos un "snapshot" rápido de esperando[]
-        int demanda[CENTROS];
-        int reparto[CENTROS];
-        int sumaDemanda = 0;
-
-        pthread_mutex_lock(&f->datos->mutex); 
-        for (int i = 0; i < CENTROS; i++) {
-            demanda[i] = f->datos->personasEnEspera[i];
-        }
-        pthread_mutex_unlock(&f->datos->mutex);
-
-        // Si hay demanda, reparto proporcional.
-        // Si NO hay demanda, reparto equilibrado (para no “perder” la tanda y evitar bloqueos futuros).
-        if (sumaDemanda > 0) {
-            // Calculamos fuera del mutex para no bloquear a otros hilos
-            calcularReparto(demanda, tanda, reparto);
-        } else {
-            // Reparto equilibrado: 1 a 1 por centros (round-robin)
-            for (int i = 0; i < CENTROS; i++) reparto[i] = 0;
-            for (int k = 0; k < tanda; k++) {
-                reparto[k % CENTROS]++; 
-            }
-        }
-        //Repartir vacunas a cada centro
-        for (int i = 0; i < CENTROS; i++) {
-            if (reparto[i] <= 0){
-                continue;
-            } 
-            // Simula el tiempo de reparto a este centro
-            tiempoReparto = rand() % f->maxTiempoReparto + 1;
-            sleep((unsigned int)tiempoReparto);
-            // Actualizar vacunas disponibles del centro
-            pthread_mutex_lock(&f->datos->mutex);
-            f->datos->vacunaDisponibles[i] += reparto[i];
-            // Estadísticas: entregadas por fábrica y recibidas por centro
-            f->datos->vacunasEntregadas[f->idFabrica - 1][i] += reparto[i];
-            f->datos->vacunasRecibidas[i] += reparto[i];
-            // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
-            pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
-            pthread_mutex_unlock(&f->datos->mutex);
-            
-            printf("Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
-            fprintf(f->datos->fSalida, "Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
-        }
-    }
-
-    printf("Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
-    fprintf(f->datos->fSalida, "Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
-
-    pthread_exit(NULL);
-}
+void* hiloFabrica(void *arg);
 void* hiloHabitante(void *arg);
 
 int main(int argc, char *argv[]) {
@@ -402,8 +326,7 @@ void limpiarDatos(DatosGenerales *datos) {
     pthread_mutex_destroy(&datos->mutex);
     fclose(datos->fSalida);
 }
-//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
+void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) { //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
     int i, j; 
     int v; 
     int totalPersonasEsperando= 0; 
@@ -446,6 +369,80 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
             copiaPersonasEnEspera[centroMayorDemanda]--; 
         }
     }
+}
+void* hiloFabrica(void *arg) {
+    Fabrica *f = (Fabrica*) arg; 
+    int fabricadas = 0; //va contando el numero de vacunas que lleva hechas la fabrica 
+    int tiempoFab;
+    int tanda;
+    int tiempoReparto;
+    int demanda[CENTROS];
+    int reparto[CENTROS];
+    int sumaDemanda = 0;
+
+
+    while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
+        // 1. Fabrica una tanda
+        tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; 
+        if (fabricadas + tanda > f->vacunasTotales){ 
+            tanda = f->vacunasTotales - fabricadas; 
+        }
+        tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; 
+        printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
+        fprintf(f->datos->fSalida, "Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
+
+        sleep((unsigned int)tiempoFab); //el hilo lo dormimos durante el tiempo de fabricacion
+        fabricadas += tanda; 
+        //Vamos a modificar un dato compartido entre threads. (Para la estadística) 
+        pthread_mutex_lock(&f->datos->mutex);
+        f->datos->vacunasFabricadas[f->idFabrica - 1] += tanda; 
+        pthread_mutex_unlock(&f->datos->mutex);
+
+        //Decidir cómo repartir la tanda según la demanda
+        pthread_mutex_lock(&f->datos->mutex); 
+        for (int i = 0; i < CENTROS; i++) {
+            demanda[i] = f->datos->personasEnEspera[i];
+        }
+        pthread_mutex_unlock(&f->datos->mutex);
+
+        // Si hay demanda (sumaDemanda), reparto proporcional. Si no, hacemos un reparto equilibrado.
+        if (sumaDemanda > 0) {
+            calcularReparto(demanda, tanda, reparto);
+        } else {
+            for (int i = 0; i < CENTROS; i++) {
+                reparto[i] = 0;
+            }
+            for (int k = 0; k < tanda; k++) {
+                reparto[k % CENTROS]++; 
+            }
+        }
+        //Repartir vacunas a cada centro
+        for (int i = 0; i < CENTROS; i++) {
+            if (reparto[i] <= 0){
+                continue;
+            } 
+            // Simula el tiempo de reparto a este centro
+            tiempoReparto = rand() % f->maxTiempoReparto + 1;
+            sleep((unsigned int)tiempoReparto);
+            // Actualizar vacunas disponibles del centro
+            pthread_mutex_lock(&f->datos->mutex);
+            f->datos->vacunaDisponibles[i] += reparto[i];
+            // Estadísticas: entregadas por fábrica y recibidas por centro
+            f->datos->vacunasEntregadas[f->idFabrica - 1][i] += reparto[i];
+            f->datos->vacunasRecibidas[i] += reparto[i];
+            // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
+            pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
+            pthread_mutex_unlock(&f->datos->mutex);
+            
+            printf("Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
+            fprintf(f->datos->fSalida, "Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
+        }
+    }
+
+    printf("Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
+    fprintf(f->datos->fSalida, "Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
+
+    pthread_exit(NULL);
 }
 void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
