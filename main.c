@@ -93,8 +93,9 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
 
-        // 1️⃣ Fabricar una tanda
-        int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; 
+        // 1. Fabricar una tanda
+        int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; //genera aleatoriamente cuantas vacunas produce en esa tanda
+        //(f->maxTanda - f->minTanda + 1) = cantidad de valores posibles, rand() % ... da un valor entre 0 y rango-1 + f->minTanda lo desplaza al rango real [minTanda, maxTanda]
         if (fabricadas + tanda > f->vacunasTotales){ //si las fabricadas y la tanda que le toca fabricar es mayor que las vacunas totales
             tanda = f->vacunasTotales - fabricadas; //solo fabrica las que le faltan
         }
@@ -107,11 +108,13 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
         sleep((unsigned int)tiempoFab); //el hilo se duerme mientras el tiempo de fabricacion
         fabricadas += tanda; //actualizamos las fabricadas
+
+        //estadistica: sumar vacunas fabricadas por esta fabrica 
         pthread_mutex_lock(&f->datos->mutex);
         f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda;
         pthread_mutex_unlock(&f->datos->mutex);
 
-        // 2️⃣ Decidir cómo repartir la tanda según la demanda (esperando[])
+        // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
         // Para no tener el mutex mucho rato, hacemos un "snapshot" rápido de esperando[]
         int snapshot[CENTROS];
         int reparto[CENTROS];
@@ -125,7 +128,7 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         // Calculamos fuera del mutex para no bloquear a otros hilos
         calcularReparto(snapshot, tanda, reparto);
 
-        // 3️⃣ Repartir a cada centro
+        // 3️. Repartir a cada centro
         // IMPORTANTE: no dormimos con el mutex cogido (si no, bloqueas a los habitantes)
         for (int i = 0; i < CENTROS; i++) {
 
@@ -133,13 +136,15 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             int tiempoRep = rand() % f->maxTiempoReparto + 1;
             sleep((unsigned int)tiempoRep);
 
-            // Zona crítica: actualizar stock del centro y despertar a habitantes si hace falta
+            // Zona crítica: actualizar stock del centro y estadísticas + despertar habitantes
             pthread_mutex_lock(&f->datos->mutex);
 
             f->datos->vacunaDisponibles[i] += reparto[i]; //llegan "reparto[i]" vacunas al centro i
-            pthread_mutex_lock(&f->datos->mutex);
-            f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda;
-            pthread_mutex_unlock(&f->datos->mutex);
+
+            // Estadísticas: entregadas por fábrica y recibidas por centro
+            f->datos->vacunasEntregadasPorFabrica[f->idFabrica - 1][i] += reparto[i];
+            f->datos->vacunasRecibidasPorCentro[i] += reparto[i];
+
             // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
             if (reparto[i] > 0) {
                 pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
