@@ -46,7 +46,7 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
     int i, q, j; 
     int totalPersonasEsperando= 0; 
     int vacunasAsignadas = 0; 
-    int centroMayorDemanda= 0;
+    int centroMayorDemanda;
     int vacunasSobrantes; 
     int copiaPersonasEnEspera[CENTROS];//copia de personasEnEspera[] para no modificar el original
     long long num;
