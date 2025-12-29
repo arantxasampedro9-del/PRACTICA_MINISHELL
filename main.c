@@ -17,6 +17,10 @@ typedef struct { //lo que comparten las fabricas y los habitantes
     int vacunasEntregadasPorFabrica[3][CENTROS]; // entregadas por fábrica y centro
     int vacunasRecibidasPorCentro[CENTROS];    // total recibido por cada centro
     int vacunadosPorCentro[CENTROS];           // cuánta gente se vacunó en cada centro
+    
+    int totalVacunados;
+    int habitantesTotales; // para que las fábricas sepan el total sin pasar más cosas
+
 } DatosCompartidos;
 
 typedef struct {
@@ -108,6 +112,15 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
 
+            int sumaDemanda = 0;
+        pthread_mutex_lock(&f->datos->mutex);
+        for (int i = 0; i < CENTROS; i++) sumaDemanda += f->datos->esperando[i];
+        pthread_mutex_unlock(&f->datos->mutex);
+
+        if (sumaDemanda == 0) {
+            sleep(1);
+            continue;  // vuelve al inicio del while sin fabricar nada
+        }
         // 1. Fabricar una tanda
         int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; //genera aleatoriamente cuantas vacunas produce en esa tanda
         //(f->maxTanda - f->minTanda + 1) = cantidad de valores posibles, rand() % ... da un valor entre 0 y rango-1 + f->minTanda lo desplaza al rango real [minTanda, maxTanda]
@@ -276,6 +289,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     fclose(f);
+    datos.totalVacunados = 0;
+    datos.habitantesTotales = habitantesTotales;
+
 
     // 2) Mostrar configuración inicial (como el ejemplo)
      printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
