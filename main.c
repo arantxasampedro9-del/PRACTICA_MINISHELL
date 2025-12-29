@@ -17,10 +17,10 @@ typedef struct { //lo que comparten las fabricas y los habitantes
     int vacunasEntregadasPorFabrica[3][CENTROS]; // entregadas por fábrica y centro
     int vacunasRecibidasPorCentro[CENTROS];    // total recibido por cada centro
     int vacunadosPorCentro[CENTROS];           // cuánta gente se vacunó en cada centro
-    
-    int totalVacunados;
-    int habitantesTotales; // para que las fábricas sepan el total sin pasar más cosas
 
+    // --- Para que las fábricas puedan terminar aunque no haya demanda ---
+    int totalVacunados;        // total vacunados en el país (para saber cuándo acabar)
+    int habitantesTotales;     // total de habitantes (para comparar con totalVacunados)
 } DatosCompartidos;
 
 typedef struct {
@@ -40,6 +40,7 @@ typedef struct {
     int maxTiempoDesplazamiento;
     DatosCompartidos *datos; //puntero para poder modificar mutex, vacunas...etc
 } Habitante;
+
 // Calcula cómo repartir "total" vacunas entre los 5 centros según la demanda (esperando[]).
 // - Si nadie espera (suma=0), NO reparte nada (todo 0).
 // - Si hay demanda, reparte proporcionalmente.
@@ -112,15 +113,22 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
 
-            int sumaDemanda = 0;
+        int sumaDemanda = 0;
         pthread_mutex_lock(&f->datos->mutex);
         for (int i = 0; i < CENTROS; i++) sumaDemanda += f->datos->esperando[i];
+
+        // ✅ Si no hay demanda, puede ser que ya estén todos vacunados: en ese caso, la fábrica debe terminar
+        int fin = (f->datos->totalVacunados >= f->datos->habitantesTotales);
         pthread_mutex_unlock(&f->datos->mutex);
 
         if (sumaDemanda == 0) {
+            if (fin) {
+                break; //ya está todo el mundo vacunado, esta fábrica puede acabar aunque no haya demanda
+            }
             sleep(1);
             continue;  // vuelve al inicio del while sin fabricar nada
         }
+
         // 1. Fabricar una tanda
         int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; //genera aleatoriamente cuantas vacunas produce en esa tanda
         //(f->maxTanda - f->minTanda + 1) = cantidad de valores posibles, rand() % ... da un valor entre 0 y rango-1 + f->minTanda lo desplaza al rango real [minTanda, maxTanda]
@@ -178,13 +186,15 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             if (reparto[i] > 0) {
                 pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
             }
+            
 
             pthread_mutex_unlock(&f->datos->mutex);
-
-           if (reparto[i] > 0) {
+            if (reparto[i] > 0) {
                 printf("Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
                 fprintf(f->datos->fSalida, "Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
             }
+
+            // Mostrar por pantalla y guardar en fichero cuántas vacunas entrega a cada centro (como el ejemplo del enunciado)
         }
     }
 
@@ -233,6 +243,8 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
         // Estadística: un vacunado más en este centro
     habitante->datos->vacunadosPorCentro[centro]++;
 
+    // ✅ Para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
+    habitante->datos->totalVacunados++;
 
     printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
     //notificamos que hilo concreto ha sido vacunado y en que centro, ponemos centro + 1 porque empieza en 0
@@ -263,6 +275,7 @@ int main(int argc, char *argv[]) {
     FILE *f = fopen(nombreFichero, "r");
     if (!f) {
         perror("Error abriendo fichero de entrada");
+        fclose(fSalida); // ✅ para no dejar el fichero de salida abierto si falla la entrada
         return 1;
     }
 
@@ -287,12 +300,10 @@ int main(int argc, char *argv[]) {
         fscanf(f, "%d", &maxTiempoDesplaz) != 1) {
         fprintf(stderr, "Error: el fichero no tiene los 9 números requeridos.\n");
         fclose(f);
+        fclose(fSalida);
         return 1;
     }
     fclose(f);
-    datos.totalVacunados = 0;
-    datos.habitantesTotales = habitantesTotales;
-
 
     // 2) Mostrar configuración inicial (como el ejemplo)
      printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
@@ -344,6 +355,10 @@ int main(int argc, char *argv[]) {
     DatosCompartidos datos;
     datos.fSalida = fSalida;
 
+    // ✅ Para que las fábricas puedan terminar correctamente
+    datos.totalVacunados = 0;
+    datos.habitantesTotales = habitantesTotales;
+
     pthread_mutex_init(&datos.mutex, NULL);
     for (int i = 0; i < CENTROS; i++) {
         datos.vacunaDisponibles[i] = vacunasInicialesPorCentro;
@@ -384,6 +399,7 @@ int main(int argc, char *argv[]) {
 
         if (pthread_create(&thFabricas[i], NULL, hiloFabrica, &fabricas[i]) != 0) {
             perror("Error creando hilo de fábrica");
+            fclose(fSalida);
             return 1;
         }
     }
@@ -405,6 +421,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error: no hay memoria para crear la tanda.\n");
             free(thHab);
             free(hab);
+            fclose(fSalida);
             return 1;
         }
 
@@ -420,6 +437,7 @@ int main(int argc, char *argv[]) {
                 for (int j = 0; j < i; j++) pthread_join(thHab[j], NULL);
                 free(thHab);
                 free(hab);
+                fclose(fSalida);
                 return 1;
             }
         }
