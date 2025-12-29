@@ -100,18 +100,19 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             tanda = f->vacunasTotales - fabricadas; //solo fabrica las que le faltan
         }
 
-        int tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab;
+        int tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; //esto es lo mismo que con lo de tanda, pero con el tiempo de fabricacion
 
         //se muestra por pantalla y tambien se guarda en el fichero de salida
         printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
         fprintf(f->datos->fSalida, "Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
 
         sleep((unsigned int)tiempoFab); //el hilo se duerme mientras el tiempo de fabricacion
-        fabricadas += tanda; //actualizamos las fabricadas
+        fabricadas += tanda; //actualizamos las fabricadas con la tanda que acaba de fabricar
 
         //estadistica: sumar vacunas fabricadas por esta fabrica 
+        //Entras en sección crítica porque vas a modificar un dato compartido entre threads. En concreto, vas a tocar vacunasFabricadasPorFabrica[], que lo pueden tocar las 3 fábricas.
         pthread_mutex_lock(&f->datos->mutex);
-        f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda;
+        f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda; //actualizas estadística global de fabricación: f->idFabrica es 1,2,3 (como lo tienes), arrays empiezan en 0, por eso -1 → posiciones 0,1,2. Suma esta tanda al total fabricado por esa fábrica.
         pthread_mutex_unlock(&f->datos->mutex);
 
         // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
