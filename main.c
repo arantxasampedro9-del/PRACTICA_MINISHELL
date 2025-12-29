@@ -44,32 +44,29 @@ typedef struct {
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
 void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
 
-void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
-    Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
-    int fabricadas = 0; //va contando el numero de vacuna que lleva hechas la fabrica 
+void* hiloFabrica(void *arg) {
+    Fabrica *f = (Fabrica*) arg; 
+    int fabricadas = 0; //va contando el numero de vacunas que lleva hechas la fabrica 
+    int tiempoFab;
+    int tanda;
+    int tiempoRep;
+
 
     while (fabricadas < f->vacunasTotales) { //la fabrica trabaja hasta que fabrica todas las vacunas que le corresponden 
-
-        // 1. Fabricar una tanda
-        int tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; //genera aleatoriamente cuantas vacunas produce en esa tanda
-        //(f->maxTanda - f->minTanda + 1) = cantidad de valores posibles, rand() % ... da un valor entre 0 y rango-1 + f->minTanda lo desplaza al rango real [minTanda, maxTanda]
-        if (fabricadas + tanda > f->vacunasTotales){ //si las fabricadas y la tanda que le toca fabricar es mayor que las vacunas totales
-            tanda = f->vacunasTotales - fabricadas; //solo fabrica las que le faltan
+        // 1. Fabrica una tanda
+        tanda = rand() % (f->maxTanda - f->minTanda + 1) + f->minTanda; 
+        if (fabricadas + tanda > f->vacunasTotales){ 
+            tanda = f->vacunasTotales - fabricadas; 
         }
-
-        int tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; //esto es lo mismo que con lo de tanda, pero con el tiempo de fabricacion
-
-        //se muestra por pantalla y tambien se guarda en el fichero de salida
+        tiempoFab = rand() % (f->maxTiempoFab - f->minTiempoFab + 1) + f->minTiempoFab; 
         printf("Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
         fprintf(f->datos->fSalida, "Fábrica %d prepara %d vacunas\n", f->idFabrica, tanda);
 
-        sleep((unsigned int)tiempoFab); //el hilo se duerme mientras el tiempo de fabricacion
-        fabricadas += tanda; //actualizamos las fabricadas con la tanda que acaba de fabricar
-
-        //estadistica: sumar vacunas fabricadas por esta fabrica 
-        //Entras en sección crítica porque vas a modificar un dato compartido entre threads. En concreto, vas a tocar vacunasFabricadasPorFabrica[], que lo pueden tocar las 3 fábricas.
+        sleep((unsigned int)tiempoFab); //el hilo lo dormimos durante el tiempo de fabricacion
+        fabricadas += tanda; 
+        //Vamos a modificar un dato compartido entre threads. (Para la estadística) 
         pthread_mutex_lock(&f->datos->mutex);
-        f->datos->vacunasFabricadas[f->idFabrica - 1] += tanda; //actualizas estadística global de fabricación: f->idFabrica es 1,2,3 (como lo tienes), arrays empiezan en 0, por eso -1 → posiciones 0,1,2. Suma esta tanda al total fabricado por esa fábrica.
+        f->datos->vacunasFabricadas[f->idFabrica - 1] += tanda; 
         pthread_mutex_unlock(&f->datos->mutex);
 
         // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
@@ -99,13 +96,12 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         }
 
         // 3️. Repartir a cada centro
-        // IMPORTANTE: no dormimos con el mutex cogido (si no, bloqueas a los habitantes)
         for (int i = 0; i < CENTROS; i++) {
-
-            if (reparto[i] <= 0) continue; //si a este centro no le toca nada, no hay reparto (ni tiempo de reparto)
-
-            // Simula el tiempo de reparto a este centro (entre 1 y maxTiempoReparto)
-            int tiempoRep = rand() % f->maxTiempoReparto + 1;
+            if (reparto[i] <= 0){
+                continue;
+            } 
+            // Simula el tiempo de reparto a este centro
+            tiempoRep = rand() % f->maxTiempoReparto + 1;
             sleep((unsigned int)tiempoRep);
 
             // Zona crítica: actualizar stock del centro y estadísticas + despertar habitantes
@@ -425,7 +421,6 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
         }
     }
 }
-
 void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
 
