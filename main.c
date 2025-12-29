@@ -400,8 +400,12 @@ void* hiloFabrica(void *arg) {
 
         //Decidir cómo repartir la tanda según la demanda
         pthread_mutex_lock(&f->datos->mutex); 
+        sumaDemanda = 0;
         for (int i = 0; i < CENTROS; i++) {
             demanda[i] = f->datos->personasEnEspera[i];
+            if (demanda[i] > 0) {
+                sumaDemanda += demanda[i];
+            }
         }
         pthread_mutex_unlock(&f->datos->mutex);
 
@@ -431,7 +435,9 @@ void* hiloFabrica(void *arg) {
             f->datos->vacunasEntregadas[f->idFabrica - 1][i] += reparto[i];
             f->datos->vacunasRecibidas[i] += reparto[i];
             // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
-            pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
+            for (int v = 0; v < reparto[i]; v++) {
+                pthread_cond_signal(&f->datos->hayVacunas[i]);
+            }
             pthread_mutex_unlock(&f->datos->mutex);
             
             printf("Fábrica %d entrega %d vacunas en el centro %d\n", f->idFabrica, reparto[i], i + 1);
