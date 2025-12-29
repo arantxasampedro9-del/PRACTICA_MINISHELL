@@ -1,37 +1,36 @@
-#include <stdio.h> //printf
-#include <stdlib.h> //rand, malloc
+#include <stdio.h> 
+#include <stdlib.h> 
 #include <pthread.h>
-#include <unistd.h> //sleep
-#include <time.h> //time()
+#include <unistd.h>
+#include <time.h> 
 
-#define CENTROS 5 //hay 5 centros
+#define CENTROS 5 
 
 typedef struct { //lo que comparten las fabricas y los habitantes
-    int vacunaDisponibles[CENTROS]; // Vacunas disponibles por centro
-    int esperando[CENTROS];    // Personas esperando en cada centro
-    pthread_mutex_t mutex;     //candado para que no se pisen varios thread al leer/escribir stock y esperando
-    pthread_cond_t hayVacunas[CENTROS]; //señal para despertar a personas qeu estan esperando vacunas en el centro i 
+    int vacunaDisponibles[CENTROS]; 
+    int esperando[CENTROS];    
+    pthread_mutex_t mutex;     //para que no se pisen varios thread al leer/escribir stock y esperando
+    pthread_cond_t hayVacunas[CENTROS]; //señal para personas que están esperando vacunas en el centro i 
     FILE *fSalida;
-        // --- Estadísticas finales ---
-    int vacunasFabricadasPorFabrica[3];        // total fabricado por cada fábrica
-    int vacunasEntregadasPorFabrica[3][CENTROS]; // entregadas por fábrica y centro
-    int vacunasRecibidasPorCentro[CENTROS];    // total recibido por cada centro
-    int vacunadosPorCentro[CENTROS];           // cuánta gente se vacunó en cada centro
-
-    // --- Para que las fábricas puedan terminar aunque no haya demanda ---
-    int totalVacunados;        // total vacunados en el país (para saber cuándo acabar)
-    int habitantesTotales;     // total de habitantes (para comparar con totalVacunados)
+    //para las estadísticas 
+    int vacunasFabricadasPorFabrica[3];      
+    int vacunasEntregadasPorFabrica[3][CENTROS]; 
+    int vacunasRecibidasPorCentro[CENTROS];   
+    int vacunadosPorCentro[CENTROS];     
+    // Para que las fábricas puedan terminar aunque no haya demanda 
+    int totalVacunados;      
+    int habitantesTotales;
 } DatosCompartidos;
 
 typedef struct {
-    int idFabrica; //numero de fabrica 
-    int vacunasTotales; //vacuna que debe fabricar en total HAY QUE INICIALIZARLO?
+    int idFabrica; 
+    int vacunasTotales;
     int minTanda; 
-    int maxTanda; //rango de vacunas que produce en cada tanda
+    int maxTanda; 
     int minTiempoFab; 
-    int maxTiempoFab; //tiempo aleatorio de fabricacion por tanda
-    int maxTiempoReparto; //tiempo aleatorio del reparto
-    DatosCompartidos *datos; //puntero para poder tocar stock[], esperando []
+    int maxTiempoFab; 
+    int maxTiempoReparto; 
+    DatosCompartidos *datos;
 } Fabrica;
 
 typedef struct {
