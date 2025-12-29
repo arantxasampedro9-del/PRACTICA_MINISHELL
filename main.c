@@ -388,7 +388,7 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
     int vacunasAsignadas = 0; 
     int centroMayorDemanda;
     int vacunasSobrantes; 
-    int copiaPersonasEnEspera[CENTROS];//copia de personasEnEspera[] para no modificar el original
+    int copiaPersonasEnEspera[CENTROS];
     long long num;
 
     // Calcular el total de personas esperando y guardarlo en total
@@ -399,31 +399,28 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
     }
 
     if (totalPersonasEsperando == 0) {
-        return; //si no hay nadie esperando en ningun centro no se reparte nada
+        return; 
     }
 
     //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
     for (i = 0; i < CENTROS; i++) {
         num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
-        v = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
-        repartoVacunas[i] = v; //asigna esas vacunas al centro i
-        vacunasAsignadas += v; //con esto sabemos cuantas vacunas hemos asignado ya en total
+        v = (int)(num / (long long)totalPersonasEsperando); 
+        repartoVacunas[i] = v; //asigna vacunas al centro i
+        vacunasAsignadas += v; //vacunas en total asignadas 
     }
 
-    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por repartir
+    vacunasSobrantes = total - vacunasAsignadas; 
     while (vacunasSobrantes > 0) { 
         centroMayorDemanda= 0;
-        
         for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
             if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
                 centroMayorDemanda = j;
             }
         }
-
-        repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
-        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por repartir
-
-        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
+        repartoVacunas[centroMayorDemanda]++; 
+        vacunasSobrantes--;
+        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){ 
             copiaPersonasEnEspera[centroMayorDemanda]--; 
         }
     }
