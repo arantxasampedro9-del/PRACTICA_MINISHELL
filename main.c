@@ -136,57 +136,7 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
 
 
-void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta funcion
-    Habitante *habitante = (Habitante*) arg; //identificacion de cada hulo/habitante
-    //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
-
-    //“Tiempo máximo que tarda un habitante hasta que se da cuenta que le han citado para vacunarse. 
-    //El mínimo es 1, lo que hace es generar un numero aleatorio entre 1 y maxTiempoReaccion
-    sleep((rand() % habitante->maxTiempoReaccion + 1));
-
-    // Selecciona un centro según su propio interés (podría hacerlo aleatoriamente).
-    int centro = rand() % CENTROS; //de entre todos los centros disponibles selecciona uno aleatoriamente
-    printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
-    fprintf(habitante->datos->fSalida, "Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
-
-    //Tiempo máximo de desplazamiento del habitante al centro de vacunación
-    //El mínimo es 1 lo que hace es generar un numero aleatorio entre 1 y maxTiempoDesplazamiento
-    sleep((rand() % habitante->maxTiempoDesplazamiento + 1));
-
-    //EMPIEZA EL INTENTO DE VACUNARSE - ZONA CRITICA
-    //dos personas no pueden vacunarse a la vez en el mismo centro, solo un hilo puede tener el mutex a la vez
-    pthread_mutex_lock(&habitante->datos->mutex); 
-    //la estructura habitante tiene un dato de tipo de la estructura DatosCompartidos al acceder a datos accedemos  a la estrucura con mutex, esperando...etc
-
-    //como ya he bloqueadoel mutex significa que el habitante esta disponible para ser vacunado por lo que aumento en 1 el numero de habitantes esperando en ese centro
-    //es como ponerse a la cola para vacunarse
-    habitante->datos->personasEnEspera[centro]++;
-
-    while (habitante->datos->vacunaDisponibles[centro] == 0) { //mientras en ese centro no haya vacunas para suministrar se espera el habitante
-        pthread_cond_wait(&habitante->datos->hayVacunas[centro], &habitante->datos->mutex); 
-        //con esto el hilo se duerme hasta recibir una señal de que haya una vacuna y proceder a la vacunacion recuperando el mutex
-    }
-
-    //como hemos salido del while significa que  hay al menos una vacuna disponible y por tanto el paciente ha sido vacunado, SE HA GASTADO UNA VACUNA EN ESE CENTRO
-    //tambien debemos quitarle de la cola de espera de ese centro porque ya ha sido vacunado
-    habitante->datos->vacunaDisponibles[centro]--;
-    habitante->datos->personasEnEspera[centro]--;
-        // Estadística: un vacunado más en este centro
-    habitante->datos->habitantesVacunados[centro]++;
-
-    // ✅ Para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
-    habitante->datos->totalVacunados++;
-
-    printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
-    //notificamos que hilo concreto ha sido vacunado y en que centro, ponemos centro + 1 porque empieza en 0
-    fprintf(habitante->datos->fSalida, "Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
-
-
-    pthread_mutex_unlock(&habitante->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica = vacunarse
-
-    pthread_exit(NULL);
-}
-
+void* hiloHabitante(void *arg);
 
 int main(int argc, char *argv[]) {
     srand((unsigned int)time(NULL));
@@ -478,4 +428,42 @@ void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacuna
             //reparto equilibrado 
         }
     }
+}
+
+void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
+    Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
+
+    sleep((rand() % habitante->maxTiempoReaccion + 1)); //El mínimo es 1, lo que hace es generar un numero aleatorio entre 1 y maxTiempoReaccion
+
+    int centro = rand() % CENTROS; //de entre todos los centros disponibles selecciona uno aleatoriamente
+    printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
+    fprintf(habitante->datos->fSalida, "Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
+   
+    sleep((rand() % habitante->maxTiempoDesplazamiento + 1));  //El mínimo es 1 lo que hace es generar un numero aleatorio entre 1 y maxTiempoDesplazamiento
+
+    //ZONA CRITICA, dos personas no pueden vacunarse a la vez en el mismo centro, solo un hilo puede tener el mutex a la vez
+    pthread_mutex_lock(&habitante->datos->mutex); 
+    
+    habitante->datos->personasEnEspera[centro]++; //el habitante esta disponible para ser vacunado por lo que aumento en 1 el numero de habitantes esperando en ese centro
+
+    while (habitante->datos->vacunaDisponibles[centro] == 0) { 
+        pthread_cond_wait(&habitante->datos->hayVacunas[centro], &habitante->datos->mutex); 
+        //con esto el hilo se duerme hasta recibir una señal de que haya una vacuna y proceder a la vacunacion recuperando el mutex
+    }
+
+    //como hemos salido del while significa que  hay al menos una vacuna disponible y por tanto el paciente ha sido vacunado
+    habitante->datos->vacunaDisponibles[centro]--;
+    habitante->datos->personasEnEspera[centro]--;
+    
+    habitante->datos->habitantesVacunados[centro]++; 
+
+    // para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
+    habitante->datos->totalVacunados++;
+
+    printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1); //notificamos que hilo concreto ha sido vacunado y en que centro
+    fprintf(habitante->datos->fSalida, "Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
+
+    pthread_mutex_unlock(&habitante->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica 
+
+    pthread_exit(NULL);
 }
