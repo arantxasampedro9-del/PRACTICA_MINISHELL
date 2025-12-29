@@ -9,7 +9,7 @@
 //lo que comparten las fabricas y los habitantes
 typedef struct { 
     int vacunaDisponibles[CENTROS]; 
-    int esperando[CENTROS];    
+    int personasEnEspera[CENTROS];    
     pthread_mutex_t mutex;     //para que no se pisen varios thread al leer/escribir stock y esperando
     pthread_cond_t hayVacunas[CENTROS]; //señal para personas que están esperando vacunas en el centro i 
     FILE *fSalida;
@@ -42,60 +42,50 @@ typedef struct {
 } Habitante;
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-static void calcularReparto(const int esperando[CENTROS], int total, int reparto[CENTROS]) {
-    int i; 
-    int suma = 0; 
+static void calcularReparto(int personasEnEspera[CENTROS], int total, int reparto[CENTROS]) {
+    int i, q, j; 
+    int totalPersonasEsperando= 0; 
     int vacunasAsignadas = 0; 
+    int centroMayorDemanda= 0;
     int vacunasSobrantes; 
-    int copiaEsperando[CENTROS];//copia de esperando[] para no modificar el original
+    int copiaPersonasEnEspera[CENTROS];//copia de personasEnEspera[] para no modificar el original
+    long long num;
 
-    // Copiamos pesos (demanda) y evitamos valores negativos por seguridad
+    // Calcular el total de personas esperando y guardarlo en total
     for (i = 0; i < CENTROS; i++) {
-        reparto[i] = 0; //inicializamos a 0 para que nadie reciba vacunas todavia
-        copiaEsperando[i] = esperando[i]; //copiamos la demanda del centro i
-        if (copiaEsperando[i] < 0){
-            copiaEsperando[i] = 0;// por si acaso hay valores incorrectos aignamos a 0
+        reparto[i] = 0; 
+        copiaPersonasEnEspera[i] = personasEnEspera[i]; 
+        if (copiaPersonasEnEspera[i] < 0){
+            copiaPersonasEnEspera[i] = 0;// por si acaso hay valores incorrectos asignamos a 0
         }
-        suma += copiaEsperando[i]; //suma guarda toda la gente esperando en todos los centros
+        totalPersonasEsperando += copiaPersonasEnEspera[i]; 
     }
 
-    if (suma == 0) {
+    if (totalPersonasEsperando == 0) {
         return; //si no hay nadie esperando en ningun centro no se reparte nada
     }
 
-    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos, lon long = 8bytes
+    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
     for (i = 0; i < CENTROS; i++) {
-        long long num = (long long)total * (long long)copiaEsperando[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
-        int q = (int)(num / (long long)suma); //parte entera de la division
+        num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
+        q = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
         reparto[i] = q; //asigna esas vacunas al centro i
         vacunasAsignadas += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
     }
-    /*EJEMPLO DE LO QUE HACE: ES UNA REGLA DE TRES
-    suma - total de vacunas
-    pesos[i] - x
-    num = total * pesos [i] basicamente si repartieramos todas las vacunas a ese centro
-    q = num / suma; con esto hacemos una regla de tres para saber cuantas vacunas le tocan a ese centro en funcion de su demanda respecto al total
-    reparto[i] = q; asignamos esas vacunas al centro i
-    asignado += q; vamos sumando las vacunas que hemos asignado ya
-
-    */
-
-    // Ajuste del resto: repartir 1 a 1 a los centros con más demanda
+  
+  
     vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por asignar
-    while (vacunasSobrantes > 0) { //si queda alguna vacuna por asignar
-        int best = 0; //best guarda el centro con mayor demanda, empieza en el 0
-        int j;
+    while (vacunasSobrantes > 0) { 
 
         for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
-            if (copiaEsperando[j] > copiaEsperando[best]) best = j;
+            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) centroMayorDemanda = j;
         }
 
-        reparto[best]++; //le damos una vacuna al centro con mas demanda
-        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por aisgnar para saber si seguir en el bucle o no
+        reparto[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
+        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por asignar para saber si seguir en el bucle o no
 
-        // Bajamos ligeramente el peso para que si hay empate largo no gane siempre el mismo
-        if (copiaEsperando[best] > 0){
-            copiaEsperando[best]--; //quitamos 1 a la demanda de ese centro para que si hay empate no gane siempre el mismo centro
+        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
+            copiaPersonasEnEspera[centroMayorDemanda]--; 
             //reparto equilibrado 
         }
     }
@@ -138,7 +128,7 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
         pthread_mutex_lock(&f->datos->mutex); 
         for (int i = 0; i < CENTROS; i++) {
-            snapshot[i] = f->datos->esperando[i];
+            snapshot[i] = f->datos->personasEnEspera[i];
             if (snapshot[i] > 0) sumaDemanda += snapshot[i];
         }
         pthread_mutex_unlock(&f->datos->mutex);
@@ -218,7 +208,7 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
 
     //como ya he bloqueadoel mutex significa que el habitante esta disponible para ser vacunado por lo que aumento en 1 el numero de habitantes esperando en ese centro
     //es como ponerse a la cola para vacunarse
-    habitante->datos->esperando[centro]++;
+    habitante->datos->personasEnEspera[centro]++;
 
     while (habitante->datos->vacunaDisponibles[centro] == 0) { //mientras en ese centro no haya vacunas para suministrar se espera el habitante
         pthread_cond_wait(&habitante->datos->hayVacunas[centro], &habitante->datos->mutex); 
@@ -228,7 +218,7 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
     //como hemos salido del while significa que  hay al menos una vacuna disponible y por tanto el paciente ha sido vacunado, SE HA GASTADO UNA VACUNA EN ESE CENTRO
     //tambien debemos quitarle de la cola de espera de ese centro porque ya ha sido vacunado
     habitante->datos->vacunaDisponibles[centro]--;
-    habitante->datos->esperando[centro]--;
+    habitante->datos->personasEnEspera[centro]--;
         // Estadística: un vacunado más en este centro
     habitante->datos->habitantesVacunados[centro]++;
 
@@ -351,7 +341,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_init(&datos.mutex, NULL);
     for (int i = 0; i < CENTROS; i++) {
         datos.vacunaDisponibles[i] = vacunasInicialesPorCentro;
-        datos.esperando[i] = 0;
+        datos.personasEnEspera[i] = 0;
         datos.vacunasRecibidas[i] = vacunasInicialesPorCentro; 
         datos.habitantesVacunados[i] = 0;
         pthread_cond_init(&datos.hayVacunas[i], NULL);
