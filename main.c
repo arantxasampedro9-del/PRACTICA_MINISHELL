@@ -12,6 +12,11 @@ typedef struct { //lo que comparten las fabricas y los habitantes
     pthread_mutex_t mutex;     //candado para que no se pisen varios thread al leer/escribir stock y esperando
     pthread_cond_t hayVacunas[CENTROS]; //señal para despertar a personas qeu estan esperando vacunas en el centro i 
     FILE *fSalida;
+        // --- Estadísticas finales ---
+    int vacunasFabricadasPorFabrica[3];        // total fabricado por cada fábrica
+    int vacunasEntregadasPorFabrica[3][CENTROS]; // entregadas por fábrica y centro
+    int vacunasRecibidasPorCentro[CENTROS];    // total recibido por cada centro
+    int vacunadosPorCentro[CENTROS];           // cuánta gente se vacunó en cada centro
 } DatosCompartidos;
 
 typedef struct {
@@ -102,6 +107,9 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
 
         sleep((unsigned int)tiempoFab); //el hilo se duerme mientras el tiempo de fabricacion
         fabricadas += tanda; //actualizamos las fabricadas
+        pthread_mutex_lock(&f->datos->mutex);
+        f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda;
+        pthread_mutex_unlock(&f->datos->mutex);
 
         // 2️⃣ Decidir cómo repartir la tanda según la demanda (esperando[])
         // Para no tener el mutex mucho rato, hacemos un "snapshot" rápido de esperando[]
@@ -129,7 +137,9 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             pthread_mutex_lock(&f->datos->mutex);
 
             f->datos->vacunaDisponibles[i] += reparto[i]; //llegan "reparto[i]" vacunas al centro i
-
+            pthread_mutex_lock(&f->datos->mutex);
+            f->datos->vacunasFabricadasPorFabrica[f->idFabrica - 1] += tanda;
+            pthread_mutex_unlock(&f->datos->mutex);
             // Si han llegado vacunas, despertamos a los que estén esperando en ese centro
             if (reparto[i] > 0) {
                 pthread_cond_broadcast(&f->datos->hayVacunas[i]); 
@@ -161,6 +171,8 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
     // Selecciona un centro según su propio interés (podría hacerlo aleatoriamente).
     int centro = rand() % CENTROS; //de entre todos los centros disponibles selecciona uno aleatoriamente
     printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
+    fprintf(habitante->datos->fSalida, "Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
+
     //Tiempo máximo de desplazamiento del habitante al centro de vacunación
     //El mínimo es 1 lo que hace es generar un numero aleatorio entre 1 y maxTiempoDesplazamiento
     sleep((rand() % habitante->maxTiempoDesplazamiento + 1));
@@ -183,9 +195,14 @@ void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta fun
     //tambien debemos quitarle de la cola de espera de ese centro porque ya ha sido vacunado
     habitante->datos->vacunaDisponibles[centro]--;
     habitante->datos->esperando[centro]--;
+        // Estadística: un vacunado más en este centro
+    habitante->datos->vacunadosPorCentro[centro]++;
+
 
     printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
     //notificamos que hilo concreto ha sido vacunado y en que centro, ponemos centro + 1 porque empieza en 0
+    fprintf(habitante->datos->fSalida, "Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
+
 
     pthread_mutex_unlock(&habitante->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica = vacunarse
 
@@ -296,6 +313,19 @@ int main(int argc, char *argv[]) {
         pthread_cond_init(&datos.hayVacunas[i], NULL);
     }
 
+        // Inicializar estadísticas
+    for (int i = 0; i < 3; i++) {
+        datos.vacunasFabricadasPorFabrica[i] = 0;
+        for (int c = 0; c < CENTROS; c++) {
+            datos.vacunasEntregadasPorFabrica[i][c] = 0;
+        }
+    }
+    for (int c = 0; c < CENTROS; c++) {
+        datos.vacunasRecibidasPorCentro[c] = 0;
+        datos.vacunadosPorCentro[c] = 0;
+    }
+
+
     // 4) Crear fábricas (3 threads)
     pthread_t thFabricas[3];
     Fabrica fabricas[3];
@@ -368,6 +398,38 @@ int main(int argc, char *argv[]) {
     // 6) Esperar a que terminen las fábricas
     for (int i = 0; i < 3; i++) {
         pthread_join(thFabricas[i], NULL);
+    }
+
+    // 8) Estadística final (pantalla + fichero)
+    printf("\n--- ESTADÍSTICA FINAL ---\n");
+    fprintf(fSalida, "\n--- ESTADÍSTICA FINAL ---\n");
+
+    // Por cada fábrica: fabricadas y entregadas por centro
+    for (int i = 0; i < 3; i++) {
+        printf("Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadasPorFabrica[i]);
+        fprintf(fSalida, "Fábrica %d ha fabricado %d vacunas\n", i + 1, datos.vacunasFabricadasPorFabrica[i]);
+
+        for (int c = 0; c < CENTROS; c++) {
+            printf("  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadasPorFabrica[i][c]);
+            fprintf(fSalida, "  Entregadas al centro %d: %d\n", c + 1, datos.vacunasEntregadasPorFabrica[i][c]);
+        }
+    }
+
+    // Por cada centro: recibidas, vacunados y sobrantes
+    for (int c = 0; c < CENTROS; c++) {
+        int sobrantes = datos.vacunaDisponibles[c];
+
+        printf("Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
+               c + 1,
+               datos.vacunasRecibidasPorCentro[c],
+               datos.vacunadosPorCentro[c],
+               sobrantes);
+
+        fprintf(fSalida, "Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
+                c + 1,
+                datos.vacunasRecibidasPorCentro[c],
+                datos.vacunadosPorCentro[c],
+                sobrantes);
     }
 
     printf("Vacunación finalizada\n");
