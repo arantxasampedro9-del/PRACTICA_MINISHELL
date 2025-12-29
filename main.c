@@ -32,9 +32,9 @@ typedef struct {
     DatosCompartidos *datos; //puntero para poder modificar mutex, vacunas...etc
 } Habitante;
 // Calcula cómo repartir "total" vacunas entre los 5 centros según la demanda (esperando[]).
-// - Si nadie espera (suma=0), reparte de forma equilibrada.
+// - Si nadie espera (suma=0), NO reparte nada (todo 0).
 // - Si hay demanda, reparte proporcionalmente.
-// - Asegura que la suma del reparto sea EXACTAMENTE "total".
+// - Asegura que la suma del reparto sea EXACTAMENTE "total" (cuando suma>0).
 static void calcularReparto(const int esperando[CENTROS], int total, int reparto[CENTROS]) {
     int i;
     int suma = 0;
@@ -50,13 +50,8 @@ static void calcularReparto(const int esperando[CENTROS], int total, int reparto
         suma += pesos[i];
     }
 
-    // Si no hay demanda, reparto uniforme
+    // ✅ Si no hay demanda, NO se entrega nada (todo 0)
     if (suma == 0) {
-        int base = total / CENTROS;
-        int rem  = total % CENTROS;
-
-        for (i = 0; i < CENTROS; i++) reparto[i] = base;
-        for (i = 0; i < rem; i++) reparto[i]++; // reparte el sobrante 1 a 1
         return;
     }
 
@@ -85,6 +80,7 @@ static void calcularReparto(const int esperando[CENTROS], int total, int reparto
         if (pesos[best] > 0) pesos[best]--;
     }
 }
+
 
 void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
     Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
