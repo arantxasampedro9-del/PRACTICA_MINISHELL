@@ -41,48 +41,63 @@ typedef struct {
 // - Si hay demanda, reparte proporcionalmente.
 // - Asegura que la suma del reparto sea EXACTAMENTE "total" (cuando suma>0).
 static void calcularReparto(const int esperando[CENTROS], int total, int reparto[CENTROS]) {
-    int i;
-    int suma = 0;
-    int asignado = 0;
-    int resto;
-    int pesos[CENTROS];//ccc
+    //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda, es decir, de la gente esperando en cada centro
+   
+    int i; //indice para recorrer los centros
+    int suma = 0; // total de personas esperando entre todos los centros
+    int asignado = 0; //vacunas ya asignadas
+    int resto; //vacunas que sobran 
+    int pesos[CENTROS];//copia de esperando[] para no modificar el original
 
     // Copiamos pesos (demanda) y evitamos valores negativos por seguridad
     for (i = 0; i < CENTROS; i++) {
-        reparto[i] = 0;
-        pesos[i] = esperando[i];
-        if (pesos[i] < 0) pesos[i] = 0;
-        suma += pesos[i];
+        reparto[i] = 0; //inicializamos a 0 para que nadie reciba vacunas todavia
+        pesos[i] = esperando[i]; //copiamos la demanda del centro i
+        if (pesos[i] < 0){
+            pesos[i] = 0;// por si acaso hay valores incorrectos aignamos a 0
+        }
+        suma += pesos[i]; //suma guarda toda la gente esperando en todos los centros
     }
 
-    // ✅ Si no hay demanda, NO se entrega nada (todo 0)
     if (suma == 0) {
-        return;
+        return; //si no hay nadie esperando en ningun centro no se reparte nada
     }
 
-    // Reparto proporcional (parte entera)
+    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos, lon long = 8bytes
     for (i = 0; i < CENTROS; i++) {
-        long long num = (long long)total * (long long)pesos[i];
-        int q = (int)(num / (long long)suma);
-        reparto[i] = q;
-        asignado += q;
+        long long num = (long long)total * (long long)pesos[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
+        int q = (int)(num / (long long)suma); //parte entera de la division
+        reparto[i] = q; //asigna esas vacunas al centro i
+        asignado += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
     }
+    /*EJEMPLO DE LO QUE HACE: ES UNA REGLA DE TRES
+    suma - total de vacunas
+    pesos[i] - x
+    num = total * pesos [i] basicamente si repartieramos todas las vacunas a ese centro
+    q = num / suma; con esto hacemos una regla de tres para saber cuantas vacunas le tocan a ese centro en funcion de su demanda respecto al total
+    reparto[i] = q; asignamos esas vacunas al centro i
+    asignado += q; vamos sumando las vacunas que hemos asignado ya
+
+    */
 
     // Ajuste del resto: repartir 1 a 1 a los centros con más demanda
-    resto = total - asignado;
-    while (resto > 0) {
-        int best = 0;
+    resto = total - asignado; //calculamos cuantas vacunas nos quedan por asignar
+    while (resto > 0) { //si queda alguna vacuna por asignar
+        int best = 0; //best guarda el centro con mayor demanda, empieza en el 0
         int j;
 
-        for (j = 1; j < CENTROS; j++) {
+        for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
             if (pesos[j] > pesos[best]) best = j;
         }
 
-        reparto[best]++;
-        resto--;
+        reparto[best]++; //le damos una vacuna al centro con mas demanda
+        resto--; //quitamos una vacuna de las que quedaban por aisgnar para saber si seguir en el bucle o no
 
         // Bajamos ligeramente el peso para que si hay empate largo no gane siempre el mismo
-        if (pesos[best] > 0) pesos[best]--;
+        if (pesos[best] > 0){
+            pesos[best]--; //quitamos 1 a la demanda de ese centro para que si hay empate no gane siempre el mismo centro
+            //reparto equilibrado 
+        }
     }
 }
 
