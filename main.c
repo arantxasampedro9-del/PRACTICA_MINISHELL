@@ -51,14 +51,13 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
         //Reparto de vacunas y para que sea segura se hace con threads 
         pthread_mutex_lock(&f->datos->mutex); //esto es voy a tocar datos compartidos, como otros threads pueden tocar esos datos se necesita el candado para q no se pisen 
 
-        int entregadas[CENTROS] = {0};
-
         // Reparte una vacuna a centros que tienen espera (si quedan vacunas en la tanda)
         for (int i = 0; i < CENTROS && tanda > 0; i++) { //va centro por centro pero solo si aun queda vacunas en tanda (tanda>0)
             if (f->datos->esperando[i] > 0) { //si el centro tiene gente esperando, incrementa las vacunas disponibles de ese centro
                 f->datos->vacunaDisponibles[i]++;
-                entregadas[i]++;
                 tanda--;
+                printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, i + 1);
+                pthread_cond_signal(&f->datos->hayVacunas[i]); //despertar a un habitante que este esperando en ese centro
             }
         }
 
@@ -73,20 +72,10 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
             //i=3 → 3%5=3 → centro 4
             //i=4 → 4%5=4 → centro 5
             //i=5 → 5%5=0 → centro 1 otra vez
-            entregadas[i % CENTROS]++;
+            printf("Fábrica %d entrega 1 vacuna al centro %d\n", f->idFabrica, (i % CENTROS) + 1);
+            pthread_cond_signal(&f->datos->hayVacunas[i % CENTROS]); //si hay habitante esperando en ese centro lo despiertas, solo despierta a uno porque solo repartimos una vacuna
             tanda--;
             i++; //para que vaya al siguiente centro 
-        }
-
-        for (int i = 0; i < CENTROS; i++) {
-            if (entregadas[i] > 0) {
-                printf("Fábrica %d entrega %d vacunas al centro %d\n",
-                       f->idFabrica, entregadas[i], i + 1);
-
-                for (int j = 0; j < entregadas[i]; j++) {
-                    pthread_cond_signal(&f->datos->hayVacunas[i]); //si hay habitante esperando en ese centro lo despiertas, solo despierta a uno porque solo repartimos una vacuna
-                }
-            }
         }
 
         pthread_mutex_unlock(&f->datos->mutex);//hasta aqui estabamos tocando ell dato compartido de vacunadisponibles ahora ya se libera para que los hbaitantes puedan vacunarse 
@@ -98,7 +87,6 @@ void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
     printf("Fábrica %d ha fabricado todas sus vacunas\n", f->idFabrica);
     pthread_exit(NULL);
 }
-
 
 void* hiloHabitante(void *arg) { //cada habitantes es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //identificacion de cada hulo/habitante
