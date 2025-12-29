@@ -450,14 +450,12 @@ void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta func
     habitante->datos->vacunaDisponibles[centro]--;
     habitante->datos->personasEnEspera[centro]--;
     habitante->datos->habitantesVacunados[centro]++; 
-
-    // para que las fábricas puedan saber cuándo termina el proceso (y no quedarse esperando si ya no hay demanda)
+    // para que las fábricas puedan saber cuándo termina el proceso 
     habitante->datos->totalVacunados++;
-
-    printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1); //notificamos que hilo concreto ha sido vacunado y en que centro
+    printf("Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1); //notificamos que habitante ha sido vacunado y en que centro
     fprintf(habitante->datos->fSalida, "Habitante %d vacunado en el centro %d\n", habitante->idHiloHabitante, centro + 1);
 
-    pthread_mutex_unlock(&habitante->datos->mutex); //soltamos al mutex para que otro habitante pueda acceder a la zona critica 
+    pthread_mutex_unlock(&habitante->datos->mutex); 
 
     pthread_exit(NULL);
 }
