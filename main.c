@@ -42,7 +42,7 @@ typedef struct {
 } Habitante;
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
+void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
 
 void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
     Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
@@ -431,7 +431,7 @@ int main(int argc, char *argv[]) {
 }
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
+void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
     int i, j; 
     int v; 
     int totalPersonasEsperando= 0; 
