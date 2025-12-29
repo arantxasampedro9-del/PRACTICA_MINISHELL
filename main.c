@@ -41,22 +41,14 @@ typedef struct {
     DatosGenerales *datos; 
 } Habitante;
 
-//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
 int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
-
 void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
-
 void inicializarDatos(DatosGenerales *datos, FILE *fSalida, int vacunasInicialesPorCentro, int habitantesTotales);
-
 int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
-
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
-
 void mostrarEstadisticasFinales(DatosGenerales *datos);
-
 void limpiarDatos(DatosGenerales *datos);
-
+void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
 void* hiloFabrica(void *arg) {
     Fabrica *f = (Fabrica*) arg; 
     int fabricadas = 0; //va contando el numero de vacunas que lleva hechas la fabrica 
@@ -142,9 +134,6 @@ void* hiloFabrica(void *arg) {
 
     pthread_exit(NULL);
 }
-
-
-
 void* hiloHabitante(void *arg);
 
 int main(int argc, char *argv[]) {
@@ -184,7 +173,6 @@ int main(int argc, char *argv[]) {
     }
 
     mostrarConfiguracion(fSalida, habitantesTotales, vacunasInicialesPorCentro, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto, maxTiempoReaccion, maxTiempoDesplaz);
-
     inicializarDatos(&datos, fSalida, vacunasInicialesPorCentro, habitantesTotales);
 
     if (crearFabricas(thFabricas, fabricas, &datos, habitantesTotales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto) != 0) {
@@ -207,52 +195,6 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-
-//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
-    int i, j; 
-    int v; 
-    int totalPersonasEsperando= 0; 
-    int vacunasAsignadas = 0; 
-    int centroMayorDemanda;
-    int vacunasSobrantes; 
-    int copiaPersonasEnEspera[CENTROS];
-    long long num;
-
-    // Calcular el total de personas esperando y guardarlo en total
-    for (i = 0; i < CENTROS; i++) {
-        repartoVacunas[i] = 0; 
-        copiaPersonasEnEspera[i] = personasEnEspera[i]; 
-        totalPersonasEsperando += copiaPersonasEnEspera[i]; 
-    }
-
-    if (totalPersonasEsperando == 0) {
-        return; 
-    }
-
-    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
-    for (i = 0; i < CENTROS; i++) {
-        num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
-        v = (int)(num / (long long)totalPersonasEsperando); 
-        repartoVacunas[i] = v; //asigna vacunas al centro i
-        vacunasAsignadas += v; //vacunas en total asignadas 
-    }
-
-    vacunasSobrantes = total - vacunasAsignadas; 
-    while (vacunasSobrantes > 0) { 
-        centroMayorDemanda= 0;
-        for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
-            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
-                centroMayorDemanda = j;
-            }
-        }
-        repartoVacunas[centroMayorDemanda]++; 
-        vacunasSobrantes--;
-        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){ 
-            copiaPersonasEnEspera[centroMayorDemanda]--; 
-        }
-    }
-}
 int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz){
     FILE *f;
 
@@ -279,7 +221,6 @@ int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *va
     fclose(f);
     return 0;
 }
-
 void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz){
     printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
     fprintf(fSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
@@ -326,7 +267,6 @@ void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInici
     printf("PROCESO DE VACUNACIÓN\n");
     fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
 }
-
 void inicializarDatos(DatosGenerales *datos, FILE *fSalida, int vacunasInicialesPorCentro, int habitantesTotales){
     int i, c;
 
@@ -351,7 +291,6 @@ void inicializarDatos(DatosGenerales *datos, FILE *fSalida, int vacunasIniciales
         }
     }
 }
-
 int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
     int i;
     int baseCuota;
@@ -378,7 +317,6 @@ int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *
 
     return 0;
 }
-
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz){
     int totalTandas;
     int porTandaBase;
@@ -429,7 +367,6 @@ int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int m
 
     return 0;
 }
-
 void mostrarEstadisticasFinales(DatosGenerales *datos) {
     int i, c;
 
@@ -465,7 +402,6 @@ void mostrarEstadisticasFinales(DatosGenerales *datos) {
     printf("Vacunación finalizada\n");
     fprintf(datos->fSalida, "Vacunación finalizada\n");
 }
-
 void limpiarDatos(DatosGenerales *datos) {
     int i;
     for (i = 0; i < CENTROS; i++) {
@@ -474,7 +410,51 @@ void limpiarDatos(DatosGenerales *datos) {
     pthread_mutex_destroy(&datos->mutex);
     fclose(datos->fSalida);
 }
+//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
+void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
+    int i, j; 
+    int v; 
+    int totalPersonasEsperando= 0; 
+    int vacunasAsignadas = 0; 
+    int centroMayorDemanda;
+    int vacunasSobrantes; 
+    int copiaPersonasEnEspera[CENTROS];
+    long long num;
 
+    // Calcular el total de personas esperando y guardarlo en total
+    for (i = 0; i < CENTROS; i++) {
+        repartoVacunas[i] = 0; 
+        copiaPersonasEnEspera[i] = personasEnEspera[i]; 
+        totalPersonasEsperando += copiaPersonasEnEspera[i]; 
+    }
+
+    if (totalPersonasEsperando == 0) {
+        return; 
+    }
+
+    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
+    for (i = 0; i < CENTROS; i++) {
+        num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
+        v = (int)(num / (long long)totalPersonasEsperando); 
+        repartoVacunas[i] = v; //asigna vacunas al centro i
+        vacunasAsignadas += v; //vacunas en total asignadas 
+    }
+
+    vacunasSobrantes = total - vacunasAsignadas; 
+    while (vacunasSobrantes > 0) { 
+        centroMayorDemanda= 0;
+        for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
+            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
+                centroMayorDemanda = j;
+            }
+        }
+        repartoVacunas[centroMayorDemanda]++; 
+        vacunasSobrantes--;
+        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){ 
+            copiaPersonasEnEspera[centroMayorDemanda]--; 
+        }
+    }
+}
 void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
 
