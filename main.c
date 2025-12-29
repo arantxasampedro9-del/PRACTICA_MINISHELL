@@ -76,14 +76,13 @@ void* hiloFabrica(void *arg) {
 
         // 2. Decidir cómo repartir la tanda según la demanda (esperando[])
         // Para no tener el mutex mucho rato, hacemos un "snapshot" rápido de esperando[]
-        int snapshot[CENTROS];
+        int demanda[CENTROS];
         int reparto[CENTROS];
         int sumaDemanda = 0;
 
         pthread_mutex_lock(&f->datos->mutex); 
         for (int i = 0; i < CENTROS; i++) {
-            snapshot[i] = f->datos->personasEnEspera[i];
-            if (snapshot[i] > 0) sumaDemanda += snapshot[i];
+            demanda[i] = f->datos->personasEnEspera[i];
         }
         pthread_mutex_unlock(&f->datos->mutex);
 
@@ -91,7 +90,7 @@ void* hiloFabrica(void *arg) {
         // Si NO hay demanda, reparto equilibrado (para no “perder” la tanda y evitar bloqueos futuros).
         if (sumaDemanda > 0) {
             // Calculamos fuera del mutex para no bloquear a otros hilos
-            calcularReparto(snapshot, tanda, reparto);
+            calcularReparto(demanda, tanda, reparto);
         } else {
             // Reparto equilibrado: 1 a 1 por centros (round-robin)
             for (int i = 0; i < CENTROS; i++) reparto[i] = 0;
