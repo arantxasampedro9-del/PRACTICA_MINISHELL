@@ -42,55 +42,7 @@ typedef struct {
 } Habitante;
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
-    int i, j; 
-    int v; 
-    int totalPersonasEsperando= 0; 
-    int vacunasAsignadas = 0; 
-    int centroMayorDemanda;
-    int vacunasSobrantes; 
-    int copiaPersonasEnEspera[CENTROS];//copia de personasEnEspera[] para no modificar el original
-    long long num;
-
-    // Calcular el total de personas esperando y guardarlo en total
-    for (i = 0; i < CENTROS; i++) {
-        repartoVacunas[i] = 0; 
-        copiaPersonasEnEspera[i] = personasEnEspera[i]; 
-        totalPersonasEsperando += copiaPersonasEnEspera[i]; 
-    }
-
-    if (totalPersonasEsperando == 0) {
-        return; //si no hay nadie esperando en ningun centro no se reparte nada
-    }
-
-    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
-    for (i = 0; i < CENTROS; i++) {
-        num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
-        v = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
-        repartoVacunas[i] = v; //asigna esas vacunas al centro i
-        vacunasAsignadas += v; //con esto sabemos cuantas vacunas hemos asignado ya en total
-    }
-
-    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por repartir
-    while (vacunasSobrantes > 0) { 
-        centroMayorDemanda= 0;
-        
-        for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
-            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
-                centroMayorDemanda = j;
-            }
-        }
-
-        repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
-        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por repartir
-
-        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
-            copiaPersonasEnEspera[centroMayorDemanda]--; 
-            //reparto equilibrado 
-        }
-    }
-}
-
+static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) ;
 
 void* hiloFabrica(void *arg) {// el arg es un void porque el pthread lo exige
     Fabrica *f = (Fabrica*) arg; //pasa el arg a ser fabrica 
@@ -476,4 +428,54 @@ int main(int argc, char *argv[]) {
 
     fclose(datos.fSalida);
     return 0;
+}
+
+//esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
+static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
+    int i, j; 
+    int v; 
+    int totalPersonasEsperando= 0; 
+    int vacunasAsignadas = 0; 
+    int centroMayorDemanda;
+    int vacunasSobrantes; 
+    int copiaPersonasEnEspera[CENTROS];//copia de personasEnEspera[] para no modificar el original
+    long long num;
+
+    // Calcular el total de personas esperando y guardarlo en total
+    for (i = 0; i < CENTROS; i++) {
+        repartoVacunas[i] = 0; 
+        copiaPersonasEnEspera[i] = personasEnEspera[i]; 
+        totalPersonasEsperando += copiaPersonasEnEspera[i]; 
+    }
+
+    if (totalPersonasEsperando == 0) {
+        return; //si no hay nadie esperando en ningun centro no se reparte nada
+    }
+
+    //usamos long por si acaso hay que calcular numeros grandes, evitamos desbordamientos
+    for (i = 0; i < CENTROS; i++) {
+        num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
+        v = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
+        repartoVacunas[i] = v; //asigna esas vacunas al centro i
+        vacunasAsignadas += v; //con esto sabemos cuantas vacunas hemos asignado ya en total
+    }
+
+    vacunasSobrantes = total - vacunasAsignadas; //calculamos cuantas vacunas nos quedan por repartir
+    while (vacunasSobrantes > 0) { 
+        centroMayorDemanda= 0;
+        
+        for (j = 1; j < CENTROS; j++) { //busca el centro que mas gente tiene esperando
+            if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) {
+                centroMayorDemanda = j;
+            }
+        }
+
+        repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
+        vacunasSobrantes--; //quitamos una vacuna de las que quedaban por repartir
+
+        if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
+            copiaPersonasEnEspera[centroMayorDemanda]--; 
+            //reparto equilibrado 
+        }
+    }
 }
