@@ -40,7 +40,7 @@ static void calcularReparto(const int esperando[CENTROS], int total, int reparto
     int suma = 0;
     int asignado = 0;
     int resto;
-    int pesos[CENTROS];
+    int pesos[CENTROS];//ccc
 
     // Copiamos pesos (demanda) y evitamos valores negativos por seguridad
     for (i = 0; i < CENTROS; i++) {
