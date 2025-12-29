@@ -42,7 +42,7 @@ typedef struct {
 } Habitante;
 
 //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
-static void calcularReparto(int personasEnEspera[CENTROS], int total, int reparto[CENTROS]) {
+static void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) {
     int i, q, j; 
     int totalPersonasEsperando= 0; 
     int vacunasAsignadas = 0; 
@@ -53,7 +53,7 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
 
     // Calcular el total de personas esperando y guardarlo en total
     for (i = 0; i < CENTROS; i++) {
-        reparto[i] = 0; 
+        repartoVacunas[i] = 0; 
         copiaPersonasEnEspera[i] = personasEnEspera[i]; 
         if (copiaPersonasEnEspera[i] < 0){
             copiaPersonasEnEspera[i] = 0;// por si acaso hay valores incorrectos asignamos a 0
@@ -69,7 +69,7 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
     for (i = 0; i < CENTROS; i++) {
         num = (long long)total * (long long)copiaPersonasEnEspera[i]; //calcula cuantas vacunas le corresponden a ese centro en funcion de su demanda
         q = (int)(num / (long long)totalPersonasEsperando); //parte entera de la division
-        reparto[i] = q; //asigna esas vacunas al centro i
+        repartoVacunas[i] = q; //asigna esas vacunas al centro i
         vacunasAsignadas += q; //con esto sabemos cuantas vacunas hemos asignado ya en total
     }
   
@@ -81,7 +81,7 @@ static void calcularReparto(int personasEnEspera[CENTROS], int total, int repart
             if (copiaPersonasEnEspera[j] > copiaPersonasEnEspera[centroMayorDemanda]) centroMayorDemanda = j;
         }
 
-        reparto[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
+        repartoVacunas[centroMayorDemanda]++; //le damos una vacuna al centro con mas demanda
         vacunasSobrantes--; //quitamos una vacuna de las que quedaban por asignar para saber si seguir en el bucle o no
 
         if (copiaPersonasEnEspera[centroMayorDemanda] > 0){
