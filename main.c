@@ -277,25 +277,23 @@ int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int m
 void mostrarEstadisticasFinales(DatosGenerales *datos) {
     int i, c;
     int sobrantes;
-    printf("\n--- ESTADÍSTICA FINAL ---\n");
-    fprintf(datos->fSalida, "\n--- ESTADÍSTICA FINAL ---\n");
+    printf("\nESTADÍSTICA FINAL\n");
+    fprintf(datos->fSalida, "\nESTADÍSTICA FINAL\n");
 
     for (i = 0; i < FABRICAS; i++) {
         printf("Fábrica %d ha fabricado %d vacunas\n", i + 1, datos->vacunasFabricadas[i]);
         fprintf(datos->fSalida, "Fábrica %d ha fabricado %d vacunas\n", i + 1, datos->vacunasFabricadas[i]);
 
         for (c = 0; c < CENTROS; c++) {
-            printf("  Entregadas al centro %d: %d\n", c + 1, datos->vacunasEntregadas[i][c]);
-            fprintf(datos->fSalida, "  Entregadas al centro %d: %d\n", c + 1, datos->vacunasEntregadas[i][c]);
+            printf(" Entregadas al centro %d: %d\n", c + 1, datos->vacunasEntregadas[i][c]);
+            fprintf(datos->fSalida, " Entregadas al centro %d: %d\n", c + 1, datos->vacunasEntregadas[i][c]);
         }
     }
-
     for (c = 0; c < CENTROS; c++) {
         sobrantes = datos->vacunaDisponibles[c];
         printf("Centro %d: vacunas recibidas=%d, hbaitantes vacunados=%d, vacunas sobrantes=%d\n", c + 1, datos->vacunasRecibidas[c], datos->habitantesVacunados[c], sobrantes);
         fprintf(datos->fSalida, "Centro %d: vacunas recibidas=%d, habitantes vacunados=%d, vacunas sobrantes=%d\n", c + 1, datos->vacunasRecibidas[c], datos->habitantesVacunados[c], sobrantes);
     }
-
     printf("Vacunación finalizada\n");
     fprintf(datos->fSalida, "Vacunación finalizada\n");
 }
