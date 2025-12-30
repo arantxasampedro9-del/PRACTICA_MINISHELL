@@ -45,7 +45,7 @@ typedef struct {
 int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
 void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
-int crearFabricas(pthread_t thFabricas[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
+int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenerales *dat, int habitTotal, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
 void mostrarEstadisticasFinales(DatosGenerales *datos);
 void destruirDatos(DatosGenerales *dat);
@@ -211,22 +211,22 @@ void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, 
         }
     }
 }
-int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *dat, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
+int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenerales *dat, int habitTotal, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
     int i;
     int vacunasPorFab;
     int resto;
-    vacunasPorFab= habitantesTotales / FABRICAS;
+    vacunasPorFab= habitTotal / FABRICAS;
     for (i = 0; i < FABRICAS; i++) {
-        fabricas[i].idFabrica = i + 1;
-        fabricas[i].vacunasTotales = vacunasPorFab;
-        fabricas[i].minTanda = minVacTanda;
-        fabricas[i].maxTanda = maxVacTanda;
-        fabricas[i].minTiempoFab = minTiempoFab;
-        fabricas[i].maxTiempoFab = maxTiempoFab;
-        fabricas[i].maxTiempoReparto = maxTiempoReparto;
-        fabricas[i].datos = dat;
+        fabr[i].idFabrica = i + 1;
+        fabr[i].vacunasTotales = vacunasPorFab;
+        fabr[i].minTanda = minVacTanda;
+        fabr[i].maxTanda = maxVacTanda;
+        fabr[i].minTiempoFab = minTiempoFab;
+        fabr[i].maxTiempoFab = maxTiempoFab;
+        fabr[i].maxTiempoReparto = maxTiempoReparto;
+        fabr[i].datos = dat;
 
-        if (pthread_create(&thFab[i], NULL, hiloFabrica, &fabricas[i]) != 0) {
+        if (pthread_create(&thFab[i], NULL, hiloFabrica, &fabr[i]) != 0) {
             fprintf(stderr, "Hubo un error al crear el hilo de la fabrica");
             return 1;
         }
