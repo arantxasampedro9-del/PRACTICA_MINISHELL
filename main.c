@@ -230,16 +230,14 @@ int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenera
 }
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz){
     int porTandaBase;
-    int restoTandas;
     int idHabitante;
     int t, i, j;
 
     porTandaBase = habitantesTotales / TOTAL_TANDAS;
-    restoTandas = habitantesTotales % TOTAL_TANDAS;
     idHabitante = 1;
 
     for (t = 0; t < TOTAL_TANDAS; t++) {
-        int tamTanda = porTandaBase + (t < restoTandas ? 1 : 0);
+        int tamTanda = porTandaBase;
 
         pthread_t *thHab = malloc(sizeof(pthread_t) * (size_t)tamTanda);
         Habitante *hab = malloc(sizeof(Habitante) * (size_t)tamTanda);
