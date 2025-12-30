@@ -228,16 +228,14 @@ int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenera
     }
     return 0;
 }
-int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz){
+int ejecutarTandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoReaccion, int maxTiempoDesplaz){
     int habitantesTanda;
     int idHabitante;
     int t, i;
-
-    habitantesTanda = habitantesTotales / TOTAL_TANDAS;
+    habitantesTanda = habTotal / TOTAL_TANDAS;
     idHabitante = 1;
 
     for (t = 0; t < TOTAL_TANDAS; t++) { //cada tanda crea habitantesTanda hilos
-
         pthread_t *hiloHab = malloc(sizeof(pthread_t) * (size_t)habitantesTanda);
         Habitante *hab = malloc(sizeof(Habitante) * (size_t)habitantesTanda);
 
@@ -252,7 +250,7 @@ int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int m
             hab[i].idHiloHabitante = idHabitante++;
             hab[i].maxTiempoReaccion = maxTiempoReaccion;
             hab[i].maxTiempoDesplazamiento = maxTiempoDesplaz;
-            hab[i].datos = datos;
+            hab[i].datos = dat;
 
             // sin comprobar errores (tal como pides)
             pthread_create(&hiloHab[i], NULL, hiloHabitante, &hab[i]);
