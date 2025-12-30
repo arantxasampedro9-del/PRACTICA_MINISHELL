@@ -48,7 +48,7 @@ void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, 
 int crearFabricas(pthread_t thFabricas[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
 void mostrarEstadisticasFinales(DatosGenerales *datos);
-void limpiarDatos(DatosGenerales *datos);
+void destruirDatos(DatosGenerales *dat);
 void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
 void* hiloFabrica(void *arg);
 void* hiloHabitante(void *arg);
@@ -97,12 +97,12 @@ int main(int argc, char *argv[]) {
     inicializarDatos(&datos, ficheroSalida, vacunasIniciales, habitantesTotales);
 
     if (crearFabricas(hilosFab, fab, &datos, habitantesTotales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto) != 0) {
-        limpiarDatos(&datos);
+        destruirDatos(&datos);
         return 1;
     }
 
     if (ejecutarTandasHabitantes(&datos, habitantesTotales, maxTiempoReaccion, maxTiempoDesplaz) != 0) {
-        limpiarDatos(&datos);
+        destruirDatos(&datos);
         return 1;
     }
 
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     }
 
     mostrarEstadisticasFinales(&datos);
-    limpiarDatos(&datos);
+    destruirDatos(&datos);
 
     return 0;
 }
@@ -313,13 +313,14 @@ void mostrarEstadisticasFinales(DatosGenerales *datos) {
     printf("Vacunación finalizada\n");
     fprintf(datos->fSalida, "Vacunación finalizada\n");
 }
-void limpiarDatos(DatosGenerales *datos) {
+
+void destruirDatos(DatosGenerales *dat) {
     int i;
     for (i = 0; i < CENTROS; i++) {
-        pthread_cond_destroy(&datos->hayVacunas[i]);
+        pthread_cond_destroy(&dat->hayVacunas[i]);
     }
-    pthread_mutex_destroy(&datos->mutex);
-    fclose(datos->fSalida);
+    pthread_mutex_destroy(&dat->mutex);
+    fclose(dat->fSalida);
 }
 void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]) { //esta funcion calcula cuantas vacunas de una tanda recibe cada uno de los centros en funcion de la demanda
     int i, j; 
