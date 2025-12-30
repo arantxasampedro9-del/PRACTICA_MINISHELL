@@ -6,6 +6,7 @@
 
 #define CENTROS 5 
 #define FABRICAS 3
+#define TOTAL_TANDAS 10
 //lo que comparten las fabricas y los habitantes
 typedef struct { 
     int vacunaDisponibles[CENTROS]; 
@@ -154,8 +155,8 @@ void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacun
     printf("Fábricas: %d\n", FABRICAS);
     fprintf(fSalida, "Fábricas: %d\n", FABRICAS);
 
-    printf("Vacunados por tanda: %d\n", habitantesTotales / 10);
-    fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / 10);
+    printf("Vacunados por tanda: %d\n", habitantesTotales / TOTAL_TANDAS);
+    fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / TOTAL_TANDAS);
 
     printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
     fprintf(fSalida, "Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
@@ -244,7 +245,7 @@ int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int m
     int idHabitante;
     int t, i, j;
 
-    totalTandas = 10;
+    totalTandas = TOTAL_TANDAS;
     porTandaBase = habitantesTotales / totalTandas;
     restoTandas = habitantesTotales % totalTandas;
     idHabitante = 1;
