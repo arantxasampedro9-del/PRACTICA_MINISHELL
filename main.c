@@ -43,7 +43,7 @@ typedef struct {
 } Habitante;
 
 int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
-void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
+void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
 int crearFabricas(pthread_t thFabricas[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
@@ -142,51 +142,51 @@ int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicial
     fclose(f);
     return 0;
 }
-void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz){
+void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz){
     printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
-    fprintf(fSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
+    fprintf(fichSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
 
-    printf("Habitantes: %d\n", habitantesTotales);
-    fprintf(fSalida, "Habitantes: %d\n", habitantesTotales);
+    printf("Habitantes: %d\n", habTotales);
+    fprintf(fichSalida, "Habitantes: %d\n", habTotales);
 
     printf("Centros de vacunación: %d\n", CENTROS);
-    fprintf(fSalida, "Centros de vacunación: %d\n", CENTROS);
+    fprintf(fichSalida, "Centros de vacunación: %d\n", CENTROS);
 
     printf("Fábricas: %d\n", FABRICAS);
-    fprintf(fSalida, "Fábricas: %d\n", FABRICAS);
+    fprintf(fichSalida, "Fábricas: %d\n", FABRICAS);
 
-    printf("Vacunados por tanda: %d\n", habitantesTotales / TOTAL_TANDAS);
-    fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / TOTAL_TANDAS);
+    printf("Vacunados por tanda: %d\n", habTotales / TOTAL_TANDAS);
+    fprintf(fichSalida, "Vacunados por tanda: %d\n", habTotales / TOTAL_TANDAS);
 
-    printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
-    fprintf(fSalida, "Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
+    printf("Vacunas iniciales en cada centro: %d\n", vIniCentro);
+    fprintf(fichSalida, "Vacunas iniciales en cada centro: %d\n", vIniCentro);
 
-    printf("Vacunas totales por fábrica: %d\n", habitantesTotales / FABRICAS);
-    fprintf(fSalida, "Vacunas totales por fábrica: %d\n", habitantesTotales / FABRICAS);
+    printf("Vacunas totales por fábrica: %d\n", habTotales / FABRICAS);
+    fprintf(fichSalida, "Vacunas totales por fábrica: %d\n", habTotales / FABRICAS);
 
     printf("Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
-    fprintf(fSalida, "Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
+    fprintf(fichSalida, "Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
 
     printf("Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
-    fprintf(fSalida, "Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
+    fprintf(fichSalida, "Máximo número de vacunas fabricadas en cada tanda: %d\n", maxVacTanda);
 
     printf("Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
-    fprintf(fSalida, "Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
+    fprintf(fichSalida, "Tiempo mínimo de fabricación de una tanda de vacunas: %d\n", minTiempoFab);
 
     printf("Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
-    fprintf(fSalida, "Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
+    fprintf(fichSalida, "Tiempo máximo de fabricación de una tanda de vacunas: %d\n", maxTiempoFab);
 
     printf("Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
-    fprintf(fSalida, "Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
+    fprintf(fichSalida, "Tiempo máximo de reparto de vacunas a los centros: %d\n", maxTiempoReparto);
 
     printf("Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
-    fprintf(fSalida, "Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
+    fprintf(fichSalida, "Tiempo máximo que un habitante tarda en ver que está citado para vacunarse: %d\n", maxTiempoReaccion);
 
     printf("Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
-    fprintf(fSalida, "Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
+    fprintf(fichSalida, "Tiempo máximo de desplazamiento del habitante al centro de vacunación: %d\n", maxTiempoDesplaz);
 
     printf("PROCESO DE VACUNACIÓN\n");
-    fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
+    fprintf(fichSalida, "PROCESO DE VACUNACIÓN\n");
 }
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales){
     int i, c;
