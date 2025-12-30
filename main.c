@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
     int maxTiempoDesplaz;
     pthread_t hilosFab[FABRICAS];
     Fabrica fab[FABRICAS];
-
     srand((unsigned int)time(NULL));
 
     if (argc >= 3) {
@@ -115,17 +114,16 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz){
+int leerFichero(char *nomFichero, int *habTotal, int *vacIniCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz){
     FILE *f;
 
-    f = fopen(nombreFichero, "r");
+    f = fopen(nomFichero, "r");
     if (!f) {
         perror("Error abriendo fichero de entrada");
         return 1;
     }
-
-    if (fscanf(f, "%d", habitantesTotales) != 1 ||
-        fscanf(f, "%d", vacunasInicialesPorCentro) != 1 ||
+    if (fscanf(f, "%d", habTotal) != 1 ||
+        fscanf(f, "%d", vacIniCentro) != 1 ||
         fscanf(f, "%d", minVacTanda) != 1 ||
         fscanf(f, "%d", maxVacTanda) != 1 ||
         fscanf(f, "%d", minTiempoFab) != 1 ||
@@ -137,7 +135,6 @@ int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicial
         fclose(f);
         return 1;
     }
-
     fclose(f);
     return 0;
 }
@@ -189,7 +186,6 @@ void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentr
 }
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales){
     int i, c;
-
     dat->fSalida = fichSal;
     dat->totalVacunados = 0;
     dat->habitantesTotales = habTotales;
@@ -203,7 +199,6 @@ void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, 
         dat->habitantesVacunados[i] = 0;
         pthread_cond_init(&dat->hayVacunas[i], NULL);
     }
-
     for (i = 0; i < FABRICAS; i++) {
         dat->vacunasFabricadas[i] = 0;
         for (c = 0; c < CENTROS; c++) {
