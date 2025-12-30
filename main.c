@@ -221,14 +221,11 @@ int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenera
         fabr[i].maxTiempoReparto = maxTiempoReparto;
         fabr[i].datos = dat;
 
-        if (pthread_create(&thFab[i], NULL, hiloFabrica, &fabr[i]) != 0) {
-            fprintf(stderr, "Hubo un error al crear el hilo de la fabrica");
-            return 1;
-        }
+        (pthread_create(&thFab[i], NULL, hiloFabrica, &fabr[i]));
     }
     return 0;
 }
-int ejecutarTandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoReaccion, int maxTiempoDesplaz){
+int ejecutarTandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoReac, int maxTiempoDesplaz){
     int habitantesTanda;
     int idHabitante;
     int t, i;
@@ -238,29 +235,21 @@ int ejecutarTandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoRea
     for (t = 0; t < TOTAL_TANDAS; t++) { //cada tanda crea habitantesTanda hilos
         pthread_t *hiloHab = malloc(sizeof(pthread_t) * (size_t)habitantesTanda);
         Habitante *hab = malloc(sizeof(Habitante) * (size_t)habitantesTanda);
-
         if (!hiloHab || !hab) {
             fprintf(stderr, "Error: no hay memoria para crear la tanda.\n");
-            free(hiloHab);
-            free(hab);
             return 1;
         }
-
         for (i = 0; i < habitantesTanda; i++) { //inicializamos estructura hab
             hab[i].idHiloHabitante = idHabitante++;
-            hab[i].maxTiempoReaccion = maxTiempoReaccion;
+            hab[i].maxTiempoReaccion = maxTiempoReac;
             hab[i].maxTiempoDesplazamiento = maxTiempoDesplaz;
             hab[i].datos = dat;
-
-            // sin comprobar errores (tal como pides)
             pthread_create(&hiloHab[i], NULL, hiloHabitante, &hab[i]);
         }
-
         // Esperar a que se vacune toda la tanda antes de llamar a la siguiente
         for (i = 0; i < habitantesTanda; i++) {
             pthread_join(hiloHab[i], NULL);
         }
-
         free(hiloHab);
         free(hab);
     }
