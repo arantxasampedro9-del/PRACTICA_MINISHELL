@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 
     ficheroSalida = fopen(nomSalida, "w");
     if (!ficheroSalida) {
-        perror("Ha habido un error al abrir el fichero de salida");
+        fprintf(stderr, "Ha habido un error al abrir el fichero");
         return 1;
     }
 
