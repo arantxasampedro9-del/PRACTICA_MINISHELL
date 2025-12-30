@@ -53,45 +53,49 @@ void* hiloFabrica(void *arg);
 void* hiloHabitante(void *arg);
 
 int main(int argc, char *argv[]) {
-    char *nombreSalida;
-    const char *nombreEntrada;
-    FILE *fSalida;
+    char *nomSalida;
+    const char *nomEntrada;
+    FILE *ficheroSalida;
     DatosGenerales datos;
 
     int habitantesTotales;
-    int vacunasInicialesPorCentro;
+    int vacunasIniciales;
     int minVacTanda, maxVacTanda;
     int minTiempoFab, maxTiempoFab;
     int maxTiempoReparto;
     int maxTiempoReaccion;
     int maxTiempoDesplaz;
 
-    pthread_t thFabricas[FABRICAS];
-    Fabrica fabricas[FABRICAS];
+    pthread_t hilosFab[FABRICAS];
+    Fabrica fab[FABRICAS];
 
     srand((unsigned int)time(NULL));
 
-    nombreSalida = "salida_vacunacion.txt";
-    if (argc >= 3) nombreSalida = argv[2];
+    nomSalida = "salida_vacunacion.txt";
+    if (argc >= 3) {
+        nomSalida = argv[2];
+    }
 
-    fSalida = fopen(nombreSalida, "w");
-    if (!fSalida) {
-        perror("Error abriendo fichero de salida");
+    ficheroSalida = fopen(nomSalida, "w");
+    if (!ficheroSalida) {
+        perror("Ha habido un error al abrir el fichero de salida");
         return 1;
     }
 
-    nombreEntrada = "entrada_vacunacion.txt";
-    if (argc >= 2) nombreEntrada = argv[1];
+    nomEntrada = "entrada_vacunacion.txt";
+    if (argc >= 2) {
+        nomEntrada = argv[1];
+    }
 
-    if (leerFichero(nombreEntrada, &habitantesTotales, &vacunasInicialesPorCentro, &minVacTanda, &maxVacTanda, &minTiempoFab, &maxTiempoFab, &maxTiempoReparto, &maxTiempoReaccion, &maxTiempoDesplaz) != 0) {
-        fclose(fSalida);
+    if (leerFichero(nomEntrada, &habitantesTotales, &vacunasIniciales, &minVacTanda, &maxVacTanda, &minTiempoFab, &maxTiempoFab, &maxTiempoReparto, &maxTiempoReaccion, &maxTiempoDesplaz) != 0) {
+        fclose(ficheroSalida);
         return 1;
     }
 
-    mostrarConfiguracionInicial(fSalida, habitantesTotales, vacunasInicialesPorCentro, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto, maxTiempoReaccion, maxTiempoDesplaz);
-    inicializarDatos(&datos, fSalida, vacunasInicialesPorCentro, habitantesTotales);
+    mostrarConfiguracionInicial(ficheroSalida, habitantesTotales, vacunasIniciales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto, maxTiempoReaccion, maxTiempoDesplaz);
+    inicializarDatos(&datos, ficheroSalida, vacunasIniciales, habitantesTotales);
 
-    if (crearFabricas(thFabricas, fabricas, &datos, habitantesTotales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto) != 0) {
+    if (crearFabricas(hilosFab, fab, &datos, habitantesTotales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto) != 0) {
         limpiarDatos(&datos);
         return 1;
     }
@@ -101,8 +105,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    for (int i = 0; i < FABRICAS; i++) {
-        pthread_join(thFabricas[i], NULL);
+    for (int i = 0; i < 3; i++) {
+        pthread_join(hilosFab[i], NULL);
     }
 
     mostrarEstadisticasFinales(&datos);
