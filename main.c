@@ -5,7 +5,7 @@
 #include <time.h> 
 
 #define CENTROS 5 
-
+#define FABRICAS 3
 //lo que comparten las fabricas y los habitantes
 typedef struct { 
     int vacunaDisponibles[CENTROS]; 
@@ -14,8 +14,8 @@ typedef struct {
     pthread_cond_t hayVacunas[CENTROS]; //señal para personas que están esperando vacunas en el centro i 
     FILE *fSalida;
     //para las estadísticas 
-    int vacunasFabricadas[3];      
-    int vacunasEntregadas[3][CENTROS]; 
+    int vacunasFabricadas[FABRICAS];      
+    int vacunasEntregadas[FABRICAS][CENTROS]; 
     int vacunasRecibidas[CENTROS];   
     int habitantesVacunados[CENTROS];     
     // Para que las fábricas puedan terminar aunque no haya demanda 
@@ -44,7 +44,7 @@ typedef struct {
 int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
 void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
-int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
+int crearFabricas(pthread_t thFabricas[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
 void mostrarEstadisticasFinales(DatosGenerales *datos);
 void limpiarDatos(DatosGenerales *datos);
@@ -66,8 +66,8 @@ int main(int argc, char *argv[]) {
     int maxTiempoReaccion;
     int maxTiempoDesplaz;
 
-    pthread_t thFabricas[3];
-    Fabrica fabricas[3];
+    pthread_t thFabricas[FABRICAS];
+    Fabrica fabricas[FABRICAS];
 
     srand((unsigned int)time(NULL));
 
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < FABRICAS; i++) {
         pthread_join(thFabricas[i], NULL);
     }
 
@@ -147,8 +147,8 @@ void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacun
     printf("Centros de vacunación: %d\n", CENTROS);
     fprintf(fSalida, "Centros de vacunación: %d\n", CENTROS);
 
-    printf("Fábricas: %d\n", 3);
-    fprintf(fSalida, "Fábricas: %d\n", 3);
+    printf("Fábricas: %d\n", FABRICAS);
+    fprintf(fSalida, "Fábricas: %d\n", FABRICAS);
 
     printf("Vacunados por tanda: %d\n", habitantesTotales / 10);
     fprintf(fSalida, "Vacunados por tanda: %d\n", habitantesTotales / 10);
@@ -156,8 +156,8 @@ void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacun
     printf("Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
     fprintf(fSalida, "Vacunas iniciales en cada centro: %d\n", vacunasInicialesPorCentro);
 
-    printf("Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
-    fprintf(fSalida, "Vacunas totales por fábrica: %d\n", habitantesTotales / 3);
+    printf("Vacunas totales por fábrica: %d\n", habitantesTotales / FABRICAS);
+    fprintf(fSalida, "Vacunas totales por fábrica: %d\n", habitantesTotales / FABRICAS);
 
     printf("Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
     fprintf(fSalida, "Mínimo número de vacunas fabricadas en cada tanda: %d\n", minVacTanda);
@@ -200,22 +200,22 @@ void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, 
         pthread_cond_init(&dat->hayVacunas[i], NULL);
     }
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < FABRICAS; i++) {
         dat->vacunasFabricadas[i] = 0;
         for (c = 0; c < CENTROS; c++) {
             dat->vacunasEntregadas[i][c] = 0;
         }
     }
 }
-int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
+int crearFabricas(pthread_t thFabricas[FABRICAS], Fabrica fabricas[FABRICAS], DatosGenerales *dat, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
     int i;
     int baseCuota;
     int resto;
 
-    baseCuota = habitantesTotales / 3;
-    resto = habitantesTotales % 3;
+    baseCuota = habitantesTotales / FABRICAS;
+    resto = habitantesTotales % FABRICAS;
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < FABRICAS; i++) {
         fabricas[i].idFabrica = i + 1;
         fabricas[i].vacunasTotales = baseCuota + (i < resto ? 1 : 0);
         fabricas[i].minTanda = minVacTanda;
@@ -223,7 +223,7 @@ int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *
         fabricas[i].minTiempoFab = minTiempoFab;
         fabricas[i].maxTiempoFab = maxTiempoFab;
         fabricas[i].maxTiempoReparto = maxTiempoReparto;
-        fabricas[i].datos = datos;
+        fabricas[i].datos = dat;
 
         if (pthread_create(&thFabricas[i], NULL, hiloFabrica, &fabricas[i]) != 0) {
             perror("Error creando hilo de fábrica");
@@ -289,7 +289,7 @@ void mostrarEstadisticasFinales(DatosGenerales *datos) {
     printf("\n--- ESTADÍSTICA FINAL ---\n");
     fprintf(datos->fSalida, "\n--- ESTADÍSTICA FINAL ---\n");
 
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < FABRICAS; i++) {
         printf("Fábrica %d ha fabricado %d vacunas\n", i + 1, datos->vacunasFabricadas[i]);
         fprintf(datos->fSalida, "Fábrica %d ha fabricado %d vacunas\n", i + 1, datos->vacunasFabricadas[i]);
 
