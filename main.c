@@ -41,9 +41,9 @@ typedef struct {
     DatosGenerales *datos; 
 } Habitante;
 
-int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
-void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
-void inicializarDatos(DatosGenerales *datos, FILE *fSalida, int vacunasInicialesPorCentro, int habitantesTotales);
+int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
+void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
+void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
 int crearFabricas(pthread_t thFabricas[3], Fabrica fabricas[3], DatosGenerales *datos, int habitantesTotales, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
 void mostrarEstadisticasFinales(DatosGenerales *datos);
@@ -83,12 +83,12 @@ int main(int argc, char *argv[]) {
     nombreEntrada = "entrada_vacunacion.txt";
     if (argc >= 2) nombreEntrada = argv[1];
 
-    if (leerConfiguracion(nombreEntrada, &habitantesTotales, &vacunasInicialesPorCentro, &minVacTanda, &maxVacTanda, &minTiempoFab, &maxTiempoFab, &maxTiempoReparto, &maxTiempoReaccion, &maxTiempoDesplaz) != 0) {
+    if (leerFichero(nombreEntrada, &habitantesTotales, &vacunasInicialesPorCentro, &minVacTanda, &maxVacTanda, &minTiempoFab, &maxTiempoFab, &maxTiempoReparto, &maxTiempoReaccion, &maxTiempoDesplaz) != 0) {
         fclose(fSalida);
         return 1;
     }
 
-    mostrarConfiguracion(fSalida, habitantesTotales, vacunasInicialesPorCentro, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto, maxTiempoReaccion, maxTiempoDesplaz);
+    mostrarConfiguracionInicial(fSalida, habitantesTotales, vacunasInicialesPorCentro, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto, maxTiempoReaccion, maxTiempoDesplaz);
     inicializarDatos(&datos, fSalida, vacunasInicialesPorCentro, habitantesTotales);
 
     if (crearFabricas(thFabricas, fabricas, &datos, habitantesTotales, minVacTanda, maxVacTanda, minTiempoFab, maxTiempoFab, maxTiempoReparto) != 0) {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz){
+int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz){
     FILE *f;
 
     f = fopen(nombreFichero, "r");
@@ -137,7 +137,7 @@ int leerConfiguracion(const char *nombreFichero, int *habitantesTotales, int *va
     fclose(f);
     return 0;
 }
-void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz){
+void mostrarConfiguracionInicial(FILE *fSalida, int habitantesTotales, int vacunasInicialesPorCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz){
     printf("VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
     fprintf(fSalida, "VACUNACIÓN EN PANDEMIA: CONFIGURACIÓN INICIAL\n");
 
@@ -183,27 +183,27 @@ void mostrarConfiguracion(FILE *fSalida, int habitantesTotales, int vacunasInici
     printf("PROCESO DE VACUNACIÓN\n");
     fprintf(fSalida, "PROCESO DE VACUNACIÓN\n");
 }
-void inicializarDatos(DatosGenerales *datos, FILE *fSalida, int vacunasInicialesPorCentro, int habitantesTotales){
+void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales){
     int i, c;
 
-    datos->fSalida = fSalida;
-    datos->totalVacunados = 0;
-    datos->habitantesTotales = habitantesTotales;
+    dat->fSalida = fichSal;
+    dat->totalVacunados = 0;
+    dat->habitantesTotales = habTotales;
 
-    pthread_mutex_init(&datos->mutex, NULL);
+    pthread_mutex_init(&dat->mutex, NULL);
 
     for (i = 0; i < CENTROS; i++) {
-        datos->vacunaDisponibles[i] = vacunasInicialesPorCentro;
-        datos->personasEnEspera[i] = 0;
-        datos->vacunasRecibidas[i] = vacunasInicialesPorCentro;
-        datos->habitantesVacunados[i] = 0;
-        pthread_cond_init(&datos->hayVacunas[i], NULL);
+        dat->vacunaDisponibles[i] = vacunasIniCentro;
+        dat->personasEnEspera[i] = 0;
+        dat->vacunasRecibidas[i] = vacunasIniCentro;
+        dat->habitantesVacunados[i] = 0;
+        pthread_cond_init(&dat->hayVacunas[i], NULL);
     }
 
     for (i = 0; i < 3; i++) {
-        datos->vacunasFabricadas[i] = 0;
+        dat->vacunasFabricadas[i] = 0;
         for (c = 0; c < CENTROS; c++) {
-            datos->vacunasEntregadas[i][c] = 0;
+            dat->vacunasEntregadas[i][c] = 0;
         }
     }
 }
