@@ -297,7 +297,6 @@ void mostrarEstadisticasFinales(DatosGenerales *datos) {
     printf("Vacunación finalizada\n");
     fprintf(datos->fSalida, "Vacunación finalizada\n");
 }
-
 void destruirDatos(DatosGenerales *dat) {
     int i;
     for (i = 0; i < CENTROS; i++) {
