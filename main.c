@@ -305,17 +305,9 @@ void mostrarEstadisticasFinales(DatosGenerales *datos) {
     for (c = 0; c < CENTROS; c++) {
         int sobrantes = datos->vacunaDisponibles[c];
 
-        printf("Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
-               c + 1,
-               datos->vacunasRecibidas[c],
-               datos->habitantesVacunados[c],
-               sobrantes);
+        printf("Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n", c + 1, datos->vacunasRecibidas[c], datos->habitantesVacunados[c], sobrantes);
 
-        fprintf(datos->fSalida, "Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n",
-                c + 1,
-                datos->vacunasRecibidas[c],
-                datos->habitantesVacunados[c],
-                sobrantes);
+        fprintf(datos->fSalida, "Centro %d: recibidas=%d, vacunados=%d, sobrantes=%d\n", c + 1, datos->vacunasRecibidas[c], datos->habitantesVacunados[c], sobrantes);
     }
 
     printf("Vacunación finalizada\n");
