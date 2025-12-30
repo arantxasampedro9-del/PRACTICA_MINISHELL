@@ -229,46 +229,46 @@ int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenera
     return 0;
 }
 int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz){
-    int porTandaBase;
+    int habitantesTanda;
     int idHabitante;
     int t, i, j;
 
-    porTandaBase = habitantesTotales / TOTAL_TANDAS;
+    habitantesTanda = habitantesTotales / TOTAL_TANDAS;
     idHabitante = 1;
 
-    for (t = 0; t < TOTAL_TANDAS; t++) {
-        int tamTanda = porTandaBase;
+    for (t = 0; t < TOTAL_TANDAS; t++) { //cada tanda crea 120 hilos
 
-        pthread_t *thHab = malloc(sizeof(pthread_t) * (size_t)tamTanda);
-        Habitante *hab = malloc(sizeof(Habitante) * (size_t)tamTanda);
+        pthread_t *hiloHab = malloc(sizeof(pthread_t) * (size_t)habitantesTanda);
+        Habitante *hab = malloc(sizeof(Habitante) * (size_t)habitantesTanda);
 
-        if (!thHab || !hab) {
+        if (!hiloHab || !hab) {
             fprintf(stderr, "Error: no hay memoria para crear la tanda.\n");
-            free(thHab);
+            free(hiloHab);
             free(hab);
             return 1;
         }
 
-        for (i = 0; i < tamTanda; i++) {
+        for (i = 0; i < habitantesTanda; i++) { //inicializamos structura hab
             hab[i].idHiloHabitante = idHabitante++;
             hab[i].maxTiempoReaccion = maxTiempoReaccion;
             hab[i].maxTiempoDesplazamiento = maxTiempoDesplaz;
             hab[i].datos = datos;
 
-            if (pthread_create(&thHab[i], NULL, hiloHabitante, &hab[i]) != 0) {
-                perror("Error creando hilo de habitante");
-                for (j = 0; j < i; j++) pthread_join(thHab[j], NULL);
-                free(thHab);
+            pthread_create(&hiloHab[i], NULL, hiloHabitante, &hab[i]);
+               
+            for (j = 0; j < i; j++)  {
+                pthread_join(hiloHab[j], NULL);
+                free(hiloHab);
                 free(hab);
                 return 1;
             }
         }
 
-        for (i = 0; i < tamTanda; i++) {
-            pthread_join(thHab[i], NULL);
+        for (i = 0; i < habitantesTanda; i++) {
+            pthread_join(hiloHab[i], NULL);
         }
 
-        free(thHab);
+        free(hiloHab);
         free(hab);
     }
 
