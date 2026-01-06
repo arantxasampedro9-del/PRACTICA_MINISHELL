@@ -225,7 +225,7 @@ int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenera
     }
     return 0;
 }
-int ejecutarTandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoReac, int maxTiempoDesplaz){
+int tandasHabitantes(DatosGenerales *dat, int habTotal, int maxTiempoReac, int maxTiempoDesplaz){
     int habitantesTanda;
     int idHabitante;
     int t, i;
