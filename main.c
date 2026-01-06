@@ -55,7 +55,7 @@ void* hiloHabitante(void *arg);
 
 int main(int argc, char *argv[]) {
     char *nomSalida;
-    const char *nomEntrada;
+    char *nomEntrada;
     FILE *ficheroSalida;
     DatosGenerales datos;
     int habitantesTotales;
@@ -413,10 +413,10 @@ void* hiloFabrica(void *arg) {
 }
 void* hiloHabitante(void *arg) { //cada habitante es un hilo que posee esta funcion
     Habitante *habitante = (Habitante*) arg; //es un puntero a la estructura habitante lo que permite acceder y modificar sus datos
-
+    int centro;
     sleep((rand() % habitante->maxTiempoReaccion + 1)); 
 
-    int centro = rand() % CENTROS; //Seleccion de centro aleatorio
+    centro = rand() % CENTROS; //Seleccion de centro aleatorio
     printf("Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
     fprintf(habitante->datos->fSalida, "Habitante %d elige el centro %d para vacunarse\n", habitante->idHiloHabitante, centro + 1);
    
