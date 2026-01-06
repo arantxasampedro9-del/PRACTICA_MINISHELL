@@ -209,7 +209,6 @@ void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, 
 int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenerales *dat, int habitTotal, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto){
     int i;
     int vacunasPorFab;
-    int resto;
     vacunasPorFab= habitTotal / FABRICAS;
     for (i = 0; i < FABRICAS; i++) {
         fabr[i].idFabrica = i + 1;
