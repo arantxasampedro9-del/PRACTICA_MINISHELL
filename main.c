@@ -42,7 +42,7 @@ typedef struct {
     DatosGenerales *datos; 
 } Habitante;
 
-int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
+int leerFichero(char *nomFichero, int *habTotal, int *vacunasInicialesPorCentro, int *minVacTanda, int *maxVacTanda, int *minTiempoFab, int *maxTiempoFab, int *maxTiempoReparto, int *maxTiempoReaccion, int *maxTiempoDesplaz);
 void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
 int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenerales *dat, int habitTotal, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
