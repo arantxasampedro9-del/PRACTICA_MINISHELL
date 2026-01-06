@@ -46,7 +46,7 @@ int leerFichero(char *nombreFichero, int *habitantesTotales, int *vacunasInicial
 void mostrarConfiguracionInicial(FILE *fichSalida, int habTotales, int vIniCentro, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto, int maxTiempoReaccion, int maxTiempoDesplaz);
 void inicializarDatos(DatosGenerales *dat, FILE *fichSal, int vacunasIniCentro, int habTotales);
 int crearFabricas(pthread_t thFab[FABRICAS], Fabrica fabr[FABRICAS], DatosGenerales *dat, int habitTotal, int minVacTanda, int maxVacTanda, int minTiempoFab, int maxTiempoFab, int maxTiempoReparto);
-int ejecutarTandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
+int tandasHabitantes(DatosGenerales *datos, int habitantesTotales, int maxTiempoReaccion, int maxTiempoDesplaz);
 void mostrarEstadisticasFinales(DatosGenerales *datos);
 void destruirDatos(DatosGenerales *dat);
 void calcularReparto(int personasEnEspera[CENTROS], int total, int repartoVacunas[CENTROS]);
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (ejecutarTandasHabitantes(&datos, habitantesTotales, maxTiempoReaccion, maxTiempoDesplaz) != 0) {
+    if (tandasHabitantes(&datos, habitantesTotales, maxTiempoReaccion, maxTiempoDesplaz) != 0) {
         destruirDatos(&datos);
         return 1;
     }
